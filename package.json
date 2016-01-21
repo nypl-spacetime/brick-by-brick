@@ -1,7 +1,7 @@
 {
   "name": "where-api",
   "version": "0.0.1",
-  "description": "",
+  "description": "NYPL Where API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.14.2",
+    "cors": "^2.7.1",
     "express": "^4.13.3"
   }
 }
