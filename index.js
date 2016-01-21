@@ -1,7 +1,7 @@
 var express = require('express');
 var app = express();
 
-var port = 3000;
+var PORT = process.env.PORT || 3000;
 
 app.get('/', function (req, res) {
   res.send({
@@ -11,6 +11,6 @@ app.get('/', function (req, res) {
   });
 });
 
-app.listen(port, function () {
-  console.log(`NYPL Where API listening on port ${port}!`);
+app.listen(PORT, function () {
+  console.log(`NYPL Where API listening on PORT ${PORT}!`);
 });
