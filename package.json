@@ -11,6 +11,8 @@
   "dependencies": {
     "body-parser": "^1.14.2",
     "cors": "^2.7.1",
-    "express": "^4.13.3"
+    "express": "^4.13.3",
+    "pg": "^4.4.3",
+    "ramda": "^0.19.1"
   }
 }
