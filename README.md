@@ -51,4 +51,8 @@ And, install [jq](https://stedolan.github.io/jq/):
 
 Then, download and parse a image collection:
 
-    digital-collections -u 22f5f390-c5f0-012f-2796-58d385a7bc34 | jq  '[.[] | {uuid: .uuid, title: .title, imageLink: .imageLinks.imageLink}]' > data/22f5f390-c5f0-012f-2796-58d385a7bc34.json
+```bash
+digital-collections -u 22f5f390-c5f0-012f-2796-58d385a7bc34 | \
+jq  '[.[] | {uuid: .uuid, title: .title, imageLink: .imageLinks.imageLink}]' > \
+data/22f5f390-c5f0-012f-2796-58d385a7bc34.json
+```
