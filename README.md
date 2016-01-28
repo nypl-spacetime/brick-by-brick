@@ -37,7 +37,8 @@ POST example:
 Where? currently includes items from the following collections
 
 - [The Eno collection of New York City views](http://digitalcollections.nypl.org/collections/the-eno-collection-of-new-york-city-views#/?tab=about)
-- [ Changing New York](http://digitalcollections.nypl.org/collections/changing-new-york#/?tab=about)
+- [Changing New York](http://digitalcollections.nypl.org/collections/changing-new-york#/?tab=about)
+- [Album of photographs depicting the construction of the Broadway line, New York City Subway](http://digitalcollections.nypl.org/collections/album-of-photographs-depicting-the-construction-of-the-broadway-line-new-york#/?tab=about)
 
 ## Data
 
