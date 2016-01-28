@@ -7,6 +7,8 @@ var package = require('./package');
 var app = express();
 var pg = require('pg');
 
+var collections = require('./data/collections.json');
+
 app.use(bodyParser.json());
 app.use(cors());
 
@@ -14,13 +16,13 @@ var PORT = process.env.PORT || 3000;
 
 var items = {};
 var uuids;
-var collections = [
-  '812e5770-c60c-012f-7167-58d385a7bc34',
-  '22f5f390-c5f0-012f-2796-58d385a7bc34',
-  'e6de27b0-c6bd-012f-afaa-58d385a7bc34'
-];
 
-R.flatten(collections.map(uuid => require(`./data/${uuid}.json`)))
+// Load collection items for each collection in collections.json
+//   extent item data with UUID of collection itself
+var collectionData = collections
+  .map(collection => require(`./data/${collection.uuid}.json`).map(item => R.merge(item, {collection: collection.uuid})));
+
+R.flatten(collectionData)
   .filter(function(item) {
     return item.imageLink;
   })
@@ -97,13 +99,8 @@ app.get('/items', function (req, res) {
   res.send(R.values(items));
 });
 
-app.get('/items/random', function (req, res) {
-  res.send(items[uuids[Math.floor(Math.random() * uuids.length)]]);
-});
-
-app.get('/items/:uuid', function (req, res) {
-  var uuid = req.params.uuid;
-  if (!items[uuid]) {
+function sendItem(req, res, uuid) {
+  if (!(uuid && items[uuid])) {
     res.status(404).send({
       result: 'error',
       message: 'Not found'
@@ -111,6 +108,16 @@ app.get('/items/:uuid', function (req, res) {
   } else {
     res.send(items[uuid]);
   }
+}
+
+app.get('/items/random', function (req, res) {
+  var uuid = uuids[Math.floor(Math.random() * uuids.length)];
+  sendItem(req, res, uuid);
+});
+
+app.get('/items/:uuid', function (req, res) {
+  var uuid = req.params.uuid;
+  sendItem(req, res, uuid);
 });
 
 app.post('/items/:uuid', function (req, res) {
@@ -185,6 +192,10 @@ app.get('/locations', function (req, res) {
       });
     }
   });
+});
+
+app.get('/collections', function (req, res) {
+  res.send(collections);
 });
 
 app.listen(PORT, function () {
