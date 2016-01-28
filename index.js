@@ -15,6 +15,7 @@ var PORT = process.env.PORT || 3000;
 var items = {};
 var uuids;
 var collections = [
+  '812e5770-c60c-012f-7167-58d385a7bc34',
   '22f5f390-c5f0-012f-2796-58d385a7bc34'
 ];
 

@@ -1,9 +1,6 @@
-# NYPL Labs - Where?
+# NYPL Labs - Where? API
 
-1. `git clone` this repository
-2. `cd` the new folder
-3. `heroku create` a new application
-4. `git push` the code to heroku (usually: `git push heroku master`)
+API for [NYPL Labs - Where?](https://github.com/nypl-spacetime/where), a tool for crowdsourced geolocating of items from the NYPL's [Digital Collections](http://digitalcollections.nypl.org/).
 
 ## API
 
@@ -37,7 +34,10 @@ POST example:
 
 ## Collections
 
-Where? currently currently only includes items from the collection [The Eno collection of New York City views](http://digitalcollections.nypl.org/collections/the-eno-collection-of-new-york-city-views#/?tab=about).
+Where? currently includes items from the following collections
+
+- [The Eno collection of New York City views](http://digitalcollections.nypl.org/collections/the-eno-collection-of-new-york-city-views#/?tab=about)
+- [ Changing New York](http://digitalcollections.nypl.org/collections/changing-new-york#/?tab=about)
 
 ## Data
 
@@ -56,3 +56,10 @@ digital-collections -u 22f5f390-c5f0-012f-2796-58d385a7bc34 | \
 jq  '[.[] | {uuid: .uuid, title: .title, imageLink: .imageLinks.imageLink}]' > \
 data/22f5f390-c5f0-012f-2796-58d385a7bc34.json
 ```
+
+## Heroku
+
+1. `git clone` this repository
+2. `cd` the new folder
+3. `heroku create` a new application
+4. `git push` the code to heroku (usually: `git push heroku master`)
