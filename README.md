@@ -32,13 +32,11 @@ POST example:
 
 - `GET /locations`: get all geolocated items
 
-## Collections
+### Collections
 
-Where? currently includes items from the following collections
+- `GET /collections`: get all collections Where? uses.
 
-- [The Eno collection of New York City views](http://digitalcollections.nypl.org/collections/the-eno-collection-of-new-york-city-views#/?tab=about)
-- [Changing New York](http://digitalcollections.nypl.org/collections/changing-new-york#/?tab=about)
-- [Album of photographs depicting the construction of the Broadway line, New York City Subway](http://digitalcollections.nypl.org/collections/album-of-photographs-depicting-the-construction-of-the-broadway-line-new-york#/?tab=about)
+The collections are loaded from [`collections.json`](data/collections.json). To exclude a collection in `collections.json`, add `"exclude": true`.
 
 ## Data
 
@@ -57,6 +55,8 @@ digital-collections -u 22f5f390-c5f0-012f-2796-58d385a7bc34 | \
 jq  '[.[] | {uuid: .uuid, title: .title, imageLink: .imageLinks.imageLink}]' > \
 data/22f5f390-c5f0-012f-2796-58d385a7bc34.json
 ```
+
+(Or run `./fetch.sh 22f5f390-c5f0-012f-2796-58d385a7bc34`!)
 
 ## Heroku
 

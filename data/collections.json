@@ -13,5 +13,16 @@
     "uuid": "e6de27b0-c6bd-012f-afaa-58d385a7bc34",
     "title": "Album of photographs depicting the construction of the Broadway line, New York City Subway.",
     "url": "http://digitalcollections.nypl.org/collections/album-of-photographs-depicting-the-construction-of-the-broadway-line-new-york#/?tab=about"
+  },
+  {
+    "uuid": "5a39e290-c6f5-012f-5a89-58d385a7bc34",
+    "title": "Album of photographs showing construction of the cable road on Broadway, New York City, in 1891.",
+    "url": "http://digitalcollections.nypl.org/collections/album-of-photographs-showing-construction-of-the-cable-road-on-broadway-new-york#/?tab=about"
+  },
+  {
+    "uuid": "439afdd0-c62b-012f-66d1-58d385a7bc34",
+    "title": "Detroit Publishing Company postcards",
+    "url": "http://digitalcollections.nypl.org/collections/detroit-publishing-company-postcards#/?tab=about",
+    "exclude": true
   }
 ]
