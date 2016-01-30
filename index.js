@@ -311,7 +311,7 @@ WHERE EXCLUDED.completed;`;
 });
 
 app.get('/locations', function (req, res) {
-  executeQuery(`SELECT * FROM locations`, null, function(err, rows) {
+  executeQuery(`SELECT * FROM locations WHERE completed`, null, function(err, rows) {
     if (err) {
       res.status(500).send({
         result: 'error',
