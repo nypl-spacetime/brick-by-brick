@@ -5,7 +5,7 @@ var jwt = require('jsonwebtoken');
 var bodyParser = require('body-parser');
 var geojsonhint = require('geojsonhint');
 var turf = {
-   centroid: require('turf-centroid')
+  centroid: require('turf-centroid')
 };
 var package = require('./package');
 var app = express();
@@ -18,7 +18,7 @@ if (!process.env.WHERE_PRIVATE_KEY) {
   process.exit(-1);
 }
 
-var KEY = process.env.WHERE_PRIVATE_KEY
+var KEY = process.env.WHERE_PRIVATE_KEY;
 
 app.use(bodyParser.json());
 app.use(cors({
@@ -294,7 +294,7 @@ DO UPDATE SET
   client = EXCLUDED.client,
   geometry = EXCLUDED.geometry,
   centroid = EXCLUDED.centroid
-WHERE EXCLUDED.completed;`
+WHERE EXCLUDED.completed;`;
 
   executeQuery(query, R.values(row), function(err) {
     if (err) {
