@@ -92,6 +92,8 @@ var createTable = `CREATE TABLE public.${tableName} (
   step text NOT NULL,
   step_index integer NOT NULL,
   completed boolean NOT NULL,
+  date_created timestamp with time zone DEFAULT (current_timestamp at time zone 'UTC'),
+  date_modified timestamp with time zone DEFAULT (current_timestamp at time zone 'UTC'),
   data jsonb,
   client jsonb,
   geometry json,
@@ -290,6 +292,7 @@ WHERE NOT completed
 DO UPDATE SET
   step_index = EXCLUDED.step_index,
   completed = EXCLUDED.completed,
+  date_modified = current_timestamp at time zone 'UTC',
   data = EXCLUDED.data,
   client = EXCLUDED.client,
   geometry = EXCLUDED.geometry,
