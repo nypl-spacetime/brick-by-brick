@@ -21,6 +21,7 @@ if (!process.env.WHERE_PRIVATE_KEY) {
 var KEY = process.env.WHERE_PRIVATE_KEY;
 
 app.use(bodyParser.json());
+
 app.use(cors({
   exposedHeaders: [
     'Content-Type',
@@ -31,6 +32,10 @@ app.use(cors({
     'Authorization'
   ]
 }));
+
+// Enable CORS OPTIONS requests
+// https://github.com/expressjs/cors#enabling-cors-pre-flight
+app.options('*', cors());
 
 var PORT = process.env.PORT || 3000;
 
