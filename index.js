@@ -25,7 +25,7 @@ app.use(bodyParser.json());
 var headers = [
   'Accept',
   'Content-Type',
-  'Authorization'
+  'Authorization',
   'Content-Length',
   'Connection',
   'X-Powered-By',
@@ -36,6 +36,10 @@ var headers = [
 ];
 
 app.use(cors({
+  origin: [
+    'http://nypl-spacetime.github.io',
+    /\.nypl\.org$/
+  ],
   methods: [
     'GET',
     'POST'
