@@ -22,15 +22,26 @@ var KEY = process.env.WHERE_PRIVATE_KEY;
 
 app.use(bodyParser.json());
 
+var headers = [
+  'Accept',
+  'Content-Type',
+  'Authorization'
+  'Content-Length',
+  'Connection',
+  'X-Powered-By',
+  'Access-Control-Allow-Origin',
+  'Access-Control-Allow-Methods',
+  'Access-Control-Allow-Headers',
+  'Access-Control-Expose-Headers'
+];
+
 app.use(cors({
-  exposedHeaders: [
-    'Content-Type',
-    'Authorization'
+  methods: [
+    'GET',
+    'POST'
   ],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization'
-  ]
+  exposedHeaders: headers,
+  allowedHeaders: headers
 }));
 
 // Enable CORS OPTIONS requests
