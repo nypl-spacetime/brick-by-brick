@@ -36,10 +36,10 @@ var headers = [
 ];
 
 app.use(cors({
-  origin: [
-    'http://nypl-spacetime.github.io',
-    /\.nypl\.org$/
-  ],
+  // origin: [
+  //   'http://nypl-spacetime.github.io',
+  //   /\.nypl\.org$/
+  // ],
   methods: [
     'GET',
     'POST'
