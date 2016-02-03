@@ -217,13 +217,29 @@ app.get('/items/:uuid/mods', function (req, res) {
     });
   } else {
     var url = `http://api.repo.nypl.org/api/v1/items/mods_captures/${uuid}`;
-console.log(url, DIGITAL_COLLECTIONS_TOKEN)
     request({
       url: url,
+      json: true,
       headers: {
         Authorization: `Token token="${DIGITAL_COLLECTIONS_TOKEN}"`
       }
-    }).pipe(res);
+    }, function (error, response, body) {
+      if (error) {
+        res.status(500).send({
+          result: 'error',
+          message: error
+        });
+      } else {
+        if (body && body.nyplAPI && body.nyplAPI.response && body.nyplAPI.response.mods) {
+          res.send(body.nyplAPI.response.mods);
+        } else {
+          res.status(406).send({
+            result: 'error',
+            message: 'Cannot parse MODS result'
+          });
+        }
+      }
+    });
   }
 });
 
