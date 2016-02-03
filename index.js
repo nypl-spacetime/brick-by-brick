@@ -2,6 +2,7 @@ var R = require('ramda');
 var express = require('express');
 var cors = require('cors');
 var jwt = require('jsonwebtoken');
+var request = require('request');
 var bodyParser = require('body-parser');
 var geojsonhint = require('geojsonhint');
 var turf = {
@@ -18,7 +19,12 @@ if (!process.env.WHERE_PRIVATE_KEY) {
   process.exit(-1);
 }
 
+if (!process.env.DIGITAL_COLLECTIONS_TOKEN) {
+  console.error('Please set DIGITAL_COLLECTIONS_TOKEN environment variable to use /mods API');
+}
+
 var KEY = process.env.WHERE_PRIVATE_KEY;
+var DIGITAL_COLLECTIONS_TOKEN = process.env.DIGITAL_COLLECTIONS_TOKEN;
 
 app.use(bodyParser.json());
 
@@ -28,18 +34,10 @@ var headers = [
   'Authorization',
   'Content-Length',
   'Connection',
-  'X-Powered-By',
-  'Access-Control-Allow-Origin',
-  'Access-Control-Allow-Methods',
-  'Access-Control-Allow-Headers',
-  'Access-Control-Expose-Headers'
+  'X-Powered-By'
 ];
 
 app.use(cors({
-  // origin: [
-  //   'http://nypl-spacetime.github.io',
-  //   /\.nypl\.org$/
-  // ],
   methods: [
     'GET',
     'POST'
@@ -170,10 +168,9 @@ function checkOrCreateToken(req, res, next) {
   if (!req.headers.authorization) {
     var session = randomString();
     var token = jwt.sign({ session: session }, KEY);
-    res.setHeader('authorization', token);
+    res.setHeader('Authorization', token);
   } else {
-    // TODO: check of 't goede jsonwebtoken is!
-    res.setHeader('authorization', req.headers.authorization);
+    res.setHeader('Authorization', req.headers.authorization);
   }
   next();
 }
@@ -208,6 +205,26 @@ app.get('/items/random', checkOrCreateToken, function (req, res) {
 app.get('/items/:uuid', checkOrCreateToken, function (req, res) {
   var uuid = req.params.uuid;
   sendItem(req, res, uuid);
+});
+
+app.get('/items/:uuid/mods', function (req, res) {
+  var uuid = req.params.uuid;
+
+  if (!DIGITAL_COLLECTIONS_TOKEN) {
+    res.status(401).send({
+      result: 'error',
+      message: 'Not authorized'
+    });
+  } else {
+    var url = `http://api.repo.nypl.org/api/v1/items/mods_captures/${uuid}`;
+console.log(url, DIGITAL_COLLECTIONS_TOKEN)
+    request({
+      url: url,
+      headers: {
+        Authorization: `Token token="${DIGITAL_COLLECTIONS_TOKEN}"`
+      }
+    }).pipe(res);
+  }
 });
 
 app.post('/items/:uuid', checkToken, function (req, res) {
