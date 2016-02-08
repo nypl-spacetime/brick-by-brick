@@ -1,5 +1,7 @@
 var R = require('ramda');
 var express = require('express');
+var WebSocketServer = require('ws').Server;
+var wss = new WebSocketServer({ port: 9889 });
 var cors = require('cors');
 var jwt = require('jsonwebtoken');
 var request = require('request');
@@ -11,6 +13,12 @@ var turf = {
 var package = require('./package');
 var app = express();
 var pg = require('pg');
+
+wss.broadcast = function broadcast(data) {
+  wss.clients.forEach(function each(client) {
+    client.send(data);
+  });
+};
 
 var collections = require('./data/collections.json');
 
@@ -110,6 +118,7 @@ var createTable = `CREATE TABLE public.${tableName} (
   step text NOT NULL,
   step_index integer NOT NULL,
   completed boolean NOT NULL,
+  image_id text,
   date_created timestamp with time zone DEFAULT (current_timestamp at time zone 'UTC'),
   date_modified timestamp with time zone DEFAULT (current_timestamp at time zone 'UTC'),
   data jsonb,
@@ -197,6 +206,33 @@ function checkToken(req, res, next) {
   }
 }
 
+function emitEvent(row) {
+  var feature = locationToFeature(row);
+  wss.broadcast(JSON.stringify(feature));
+}
+
+function locationToFeature(row) {
+  return {
+    type: 'Feature',
+    properties: {
+      uuid: row.uuid,
+      imageId: row.image_id,
+      step: row.step,
+      completed: row.completed,
+      url: 'http://digitalcollections.nypl.org/items/' + row.uuid,
+      data: row.data
+    },
+    geometry: row.geometry
+  };
+}
+
+function locationsToGeoJson(rows) {
+  return {
+    type: 'FeatureCollection',
+    features: rows.map(locationToFeature)
+  };
+}
+
 app.get('/items/random', checkOrCreateToken, function (req, res) {
   var uuid = uuids[Math.floor(Math.random() * uuids.length)];
   sendItem(req, res, uuid);
@@ -249,6 +285,7 @@ app.post('/items/:uuid', checkToken, function (req, res) {
     session: null,
     step: null,
     step_index: null,
+    image_id: null,
     completed: null,
     data: null,
     client: null,
@@ -264,6 +301,8 @@ app.post('/items/:uuid', checkToken, function (req, res) {
     });
     return;
   }
+
+  row.image_id = items[row.uuid].imageID;
 
   // POST data should be GeoJSON feature (with optional geometry)
   //   properties should contain:
@@ -359,6 +398,10 @@ WHERE EXCLUDED.completed;`;
         message: err.message
       });
     } else {
+      emitEvent(Object.assign(row, {
+        data: feature.properties.data,
+        geometry: feature.geometry
+      }));
       res.send({
         result: 'success'
       });
@@ -366,28 +409,37 @@ WHERE EXCLUDED.completed;`;
   });
 });
 
+var locationsQuery = `
+  SELECT * FROM (
+    SELECT uuid, session, MAX(step_index) AS max_step FROM locations
+    WHERE completed
+    GROUP BY uuid, session
+  ) AS s JOIN locations l ON l.step_index = max_step AND s.uuid = l.uuid AND s.session = l.session
+  ORDER BY date_modified DESC
+`;
+
 app.get('/locations', function (req, res) {
-  executeQuery(`SELECT * FROM locations WHERE completed`, null, function(err, rows) {
+  executeQuery(locationsQuery, null, function(err, rows) {
     if (err) {
       res.status(500).send({
         result: 'error',
         message: err.message
       });
     } else {
-      res.send({
-        type: 'FeatureCollection',
-        features: rows.map(row => ({
-          type: 'Feature',
-          properties: {
-            uuid: row.uuid,
-            step: row.step,
-            completed: row.completed,
-            url: 'http://digitalcollections.nypl.org/items/' + row.uuid,
-            data: row.data
-          },
-          geometry: row.geometry
-        }))
+      res.send(locationsToGeoJson(rows));
+    }
+  });
+});
+
+app.get('/locations/latest', function (req, res) {
+  executeQuery(`${locationsQuery} LIMIT 100`, null, function(err, rows) {
+    if (err) {
+      res.status(500).send({
+        result: 'error',
+        message: err.message
       });
+    } else {
+      res.send(locationsToGeoJson(rows));
     }
   });
 });
