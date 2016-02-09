@@ -27,6 +27,6 @@
     "uuid": "439afdd0-c62b-012f-66d1-58d385a7bc34",
     "title": "Detroit Publishing Company postcards",
     "url": "http://digitalcollections.nypl.org/collections/detroit-publishing-company-postcards#/?tab=about",
-    "exclude": false
+    "exclude": true
   }
 ]
