@@ -3,7 +3,7 @@
     "uuid": "22f5f390-c5f0-012f-2796-58d385a7bc34",
     "title": "The Eno collection of New York City views",
     "url": "http://digitalcollections.nypl.org/collections/the-eno-collection-of-new-york-city-views#/?tab=about",
-    "exclude": false
+    "exclude": true
   },
   {
     "uuid": "812e5770-c60c-012f-7167-58d385a7bc34",
@@ -15,13 +15,13 @@
     "uuid": "e6de27b0-c6bd-012f-afaa-58d385a7bc34",
     "title": "Album of photographs depicting the construction of the Broadway line, New York City Subway.",
     "url": "http://digitalcollections.nypl.org/collections/album-of-photographs-depicting-the-construction-of-the-broadway-line-new-york#/?tab=about",
-    "exclude": false
+    "exclude": true
   },
   {
     "uuid": "5a39e290-c6f5-012f-5a89-58d385a7bc34",
     "title": "Album of photographs showing construction of the cable road on Broadway, New York City, in 1891.",
     "url": "http://digitalcollections.nypl.org/collections/album-of-photographs-showing-construction-of-the-cable-road-on-broadway-new-york#/?tab=about",
-    "exclude": false
+    "exclude": true
   },
   {
     "uuid": "439afdd0-c62b-012f-66d1-58d385a7bc34",
