@@ -9,7 +9,7 @@
     "uuid": "812e5770-c60c-012f-7167-58d385a7bc34",
     "title": "Changing New York",
     "url": "http://digitalcollections.nypl.org/collections/changing-new-york#/?tab=about",
-    "exclude": false
+    "exclude": true
   },
   {
     "uuid": "e6de27b0-c6bd-012f-afaa-58d385a7bc34",
@@ -28,5 +28,11 @@
     "title": "Detroit Publishing Company postcards",
     "url": "http://digitalcollections.nypl.org/collections/detroit-publishing-company-postcards#/?tab=about",
     "exclude": true
+  },
+  {
+    "uuid": "34007fd0-c6d2-012f-5566-58d385a7bc34",
+    "title": "Pictorial Description of Broadway",
+    "url": "http://digitalcollections.nypl.org/collections/pictorial-description-of-broadway#/?tab=about",
+    "exclude": false
   }
 ]
