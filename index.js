@@ -2,8 +2,6 @@
 
 var R = require('ramda')
 var express = require('express')
-var WebSocketServer = require('ws').Server
-var wss = new WebSocketServer({ port: 9889 })
 var cors = require('cors')
 var jwt = require('jsonwebtoken')
 var request = require('request')
@@ -14,13 +12,9 @@ var turf = {
 }
 var wherePackage = require('./package')
 var app = express()
+var server = require('http').createServer(app);
+var io = require('socket.io')(server);
 var pg = require('pg')
-
-wss.broadcast = function broadcast (data) {
-  wss.clients.forEach(function each (client) {
-    client.send(data)
-  })
-}
 
 var collections = require('./data/collections.json')
 
@@ -207,7 +201,7 @@ function checkToken (req, res, next) {
 
 function emitEvent (row) {
   var feature = locationToFeature(row)
-  wss.broadcast(JSON.stringify(feature))
+  io.emit('feature', feature)
 }
 
 function locationToFeature (row) {
@@ -447,6 +441,6 @@ app.get('/collections', function (req, res) {
   res.send(collections)
 })
 
-app.listen(PORT, function () {
+server.listen(PORT, function () {
   console.log(`NYPL Where API listening on PORT ${PORT}!`)
 })
