@@ -8,7 +8,7 @@
     "url": "git+https://github.com/nypl-spacetime/where.git"
   },
   "scripts": {
-    "test": "jshint index.js && jscs index.js"
+    "test": "standard"
   },
   "author": "NYPL Labs",
   "license": "MIT",
@@ -25,20 +25,6 @@
     "ws": "^1.0.1"
   },
   "devDependencies": {
-    "jshint": "^2.6.0"
-  },
-  "jshintConfig": {
-    "esversion": 6,
-    "node": true,
-    "globalstrict": false,
-    "undef": true,
-    "unused": true,
-    "noarg": true
-  },
-  "jscsConfig": {
-    "preset": "airbnb",
-    "requireCamelCaseOrUpperCaseIdentifiers": null,
-    "disallowMultipleVarDecl": true,
-    "requireMultipleVarDecl": null
+    "standard": "^6.0.8"
   }
 }
