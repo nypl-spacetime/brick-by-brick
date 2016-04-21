@@ -17,6 +17,8 @@ The Where API needs a PostgreSQL database to store geotagged images. Make sure P
 
     export DATABASE_URL=postgres://postgres:postgres@localhost/where
 
+The API creates its tables when it's started for the first time, but it does not create a database; please make sure the database mentioned in the connection string (`where` by default) is created.
+
 To fetch image metadata from NYPL's Digital Collections API, the Where API needs a valid API key. Sign up for a token on [api.repo.nypl.org](http://api.repo.nypl.org/), and set the `DIGITAL_COLLECTIONS_TOKEN` environment variable to hold this token:
 
     export DIGITAL_COLLECTIONS_TOKEN=123456789
