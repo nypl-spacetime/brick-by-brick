@@ -5,7 +5,7 @@
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nypl-spacetime/where.git"
+    "url": "git+https://github.com/nypl-spacetime/where-api.git"
   },
   "scripts": {
     "test": "standard"

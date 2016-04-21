@@ -12,8 +12,8 @@ var turf = {
 }
 var wherePackage = require('./package')
 var app = express()
-var server = require('http').createServer(app);
-var io = require('socket.io')(server);
+var server = require('http').createServer(app)
+var io = require('socket.io')(server)
 var pg = require('pg')
 
 var collections = require('./data/collections.json')
@@ -70,7 +70,7 @@ var collectionData = collections
 R.flatten(collectionData)
   .filter((item) => item.imageLink)
   .forEach((item) => {
-    item.imageLink = item.imageLink.filter(function (imageLink) {
+    item.imageLink = item.imageLink.filter((imageLink) => {
       return imageLink.includes('&t=w&')
     })[0]
 
@@ -82,11 +82,11 @@ uuids = R.keys(items)
 // https://devcenter.heroku.com/articles/getting-started-with-nodejs#provision-a-database
 var pgConString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost/where'
 function executeQuery (query, values, callback) {
-  pg.connect(pgConString, function (err, client, done) {
+  pg.connect(pgConString, (err, client, done) => {
     if (err) {
       callback(err)
     } else {
-      client.query(query, values, function (err, result) {
+      client.query(query, values, (err, result) => {
         done()
         if (err) {
           callback(err)
@@ -121,7 +121,7 @@ var createTable = `CREATE TABLE public.${tableName} (
   CONSTRAINT locations_pkey PRIMARY KEY (uuid, session, step)
 )`
 
-executeQuery(tableExists, null, function (err, rows) {
+executeQuery(tableExists, null, (err, rows) => {
   if (err) {
     console.error('Error connecting to database:', err.message)
     process.exit(-1)
@@ -138,14 +138,14 @@ executeQuery(tableExists, null, function (err, rows) {
   }
 })
 
-app.get('/', function (req, res) {
+app.get('/', (req, res) => {
   res.send({
     title: wherePackage.description,
     version: wherePackage.version
   })
 })
 
-app.get('/items', function (req, res) {
+app.get('/items', (req, res) => {
   res.send(R.values(items))
 })
 
@@ -185,7 +185,7 @@ function checkToken (req, res, next) {
     })
   } else {
     var token = req.headers.authorization
-    jwt.verify(token, KEY, function (err, decoded) {
+    jwt.verify(token, KEY, (err, decoded) => {
       if (err) {
         res.status(401).send({
           result: 'error',
@@ -226,17 +226,17 @@ function locationsToGeoJson (rows) {
   }
 }
 
-app.get('/items/random', checkOrCreateToken, function (req, res) {
+app.get('/items/random', checkOrCreateToken, (req, res) => {
   var uuid = uuids[Math.floor(Math.random() * uuids.length)]
   sendItem(req, res, uuid)
 })
 
-app.get('/items/:uuid', checkOrCreateToken, function (req, res) {
+app.get('/items/:uuid', checkOrCreateToken, (req, res) => {
   var uuid = req.params.uuid
   sendItem(req, res, uuid)
 })
 
-app.get('/items/:uuid/mods', function (req, res) {
+app.get('/items/:uuid/mods', (req, res) => {
   var uuid = req.params.uuid
 
   if (!DIGITAL_COLLECTIONS_TOKEN) {
@@ -272,7 +272,7 @@ app.get('/items/:uuid/mods', function (req, res) {
   }
 })
 
-app.post('/items/:uuid', checkToken, function (req, res) {
+app.post('/items/:uuid', checkToken, (req, res) => {
   var row = {
     uuid: req.params.uuid,
     session: null,
@@ -371,20 +371,20 @@ app.post('/items/:uuid', checkToken, function (req, res) {
   var placeholders = Array.from(new Array(columns.length), (x, i) => i + 1).map((i) => `$${i}`)
   var values = placeholders.join(', ')
   var query = `INSERT INTO locations (${columns.join(', ')})
-VALUES (${values})
-ON CONFLICT (uuid, session, step)
-WHERE NOT completed
-DO UPDATE SET
-  step_index = EXCLUDED.step_index,
-  completed = EXCLUDED.completed,
-  date_modified = current_timestamp at time zone 'UTC',
-  data = EXCLUDED.data,
-  client = EXCLUDED.client,
-  geometry = EXCLUDED.geometry,
-  centroid = EXCLUDED.centroid
-WHERE EXCLUDED.completed;`
+    VALUES (${values})
+    ON CONFLICT (uuid, session, step)
+    WHERE NOT completed
+    DO UPDATE SET
+      step_index = EXCLUDED.step_index,
+      completed = EXCLUDED.completed,
+      date_modified = current_timestamp at time zone 'UTC',
+      data = EXCLUDED.data,
+      client = EXCLUDED.client,
+      geometry = EXCLUDED.geometry,
+      centroid = EXCLUDED.centroid
+    WHERE EXCLUDED.completed;`
 
-  executeQuery(query, R.values(row), function (err) {
+  executeQuery(query, R.values(row), (err) => {
     if (err) {
       res.status(500).send({
         result: 'error',
@@ -404,15 +404,18 @@ WHERE EXCLUDED.completed;`
 
 var locationsQuery = `
   SELECT * FROM (
-    SELECT uuid, session, MAX(step_index) AS max_step FROM locations
+    SELECT uuid, session, MAX(step_index) AS max_step
+    FROM locations
     WHERE completed
     GROUP BY uuid, session
-  ) AS s JOIN locations l ON l.step_index = max_step AND s.uuid = l.uuid AND s.session = l.session
+  ) AS s
+  JOIN locations l
+  ON l.step_index = max_step AND s.uuid = l.uuid AND s.session = l.session
   ORDER BY date_modified DESC
 `
 
-app.get('/locations', function (req, res) {
-  executeQuery(locationsQuery, null, function (err, rows) {
+app.get('/locations', (req, res) => {
+  executeQuery(locationsQuery, null, (err, rows) => {
     if (err) {
       res.status(500).send({
         result: 'error',
@@ -424,8 +427,8 @@ app.get('/locations', function (req, res) {
   })
 })
 
-app.get('/locations/latest', function (req, res) {
-  executeQuery(`${locationsQuery} LIMIT 100`, null, function (err, rows) {
+app.get('/locations/latest', (req, res) => {
+  executeQuery(`${locationsQuery} LIMIT 500`, null, (err, rows) => {
     if (err) {
       res.status(500).send({
         result: 'error',
@@ -441,6 +444,6 @@ app.get('/collections', function (req, res) {
   res.send(collections)
 })
 
-server.listen(PORT, function () {
+server.listen(PORT, () => {
   console.log(`NYPL Where API listening on PORT ${PORT}!`)
 })
