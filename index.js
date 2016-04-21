@@ -212,6 +212,7 @@ function locationToFeature (row) {
       imageId: row.image_id,
       step: row.step,
       completed: row.completed,
+      date: row.date_modified,
       url: 'http://digitalcollections.nypl.org/items/' + row.uuid,
       data: row.data
     },
