@@ -54,7 +54,7 @@ app.use(cors({
 // https://github.com/expressjs/cors#enabling-cors-pre-flight
 app.options('*', cors())
 
-var PORT = process.env.PORT || 3000
+var PORT = process.env.PORT || 3011
 
 var items = {}
 var uuids
