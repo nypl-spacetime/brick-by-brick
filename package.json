@@ -1,7 +1,7 @@
 {
   "name": "where-api",
   "version": "0.0.1",
-  "description": "NYPL Labs - Where API",
+  "description": "NYPL Labs - Where? API",
   "main": "index.js",
   "repository": {
     "type": "git",
@@ -17,7 +17,8 @@
     "cors": "^2.7.1",
     "express": "^4.13.3",
     "geojsonhint": "^1.1.0",
-    "jsonwebtoken": "^5.5.4",
+    "highland": "^2.8.1",
+    "minimist": "^1.2.0",
     "pg": "^4.4.3",
     "ramda": "^0.19.1",
     "request": "^2.69.0",
