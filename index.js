@@ -352,7 +352,7 @@ app.get('/submissions/count', (req, res) => {
 
     var count = (rows[0] && rows[0].count) || 0
     res.send({
-      submissions: count
+      completed: count
     })
   })
 })
