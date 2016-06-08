@@ -210,6 +210,14 @@ app.post('/items/:uuid', itemExists, (req, res) => {
   //     properties.data should contain step data
   var feature = req.body
 
+  if (!feature || !feature.properties || feature.type !== 'Feature') {
+    res.status(406).send({
+      result: 'error',
+      message: 'POST data should be GeoJSON Feature'
+    })
+    return
+  }
+
   // Check if step and stepIndex are present in properties
   if (!(feature.properties.step && feature.properties.stepIndex >= 0)) {
     res.status(406).send({
