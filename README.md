@@ -20,9 +20,14 @@ The Where API needs a PostgreSQL database to store geotagged images. Make sure P
 ### Database initialization
 
 Before starting the API, you need to create the database mentioned in the connection string, and afterwards run the following two SQL files to create the necessary schemas, tables and indexes:
-express-pg-oauth/blob/master/tables.sql
-  - Where? API tables: [`where-api-tables.sql`](where-api-tables.sql)
+
+  - Where? API tables: [`where-api-tables.sql`](https://www.pgadmin.org/download/)
   - OAuth schema and tables: [`oauth-tables.sql`](https://github.com/nypl-spacetime/express-pg-oauth/blob/master/oauth-tables.sql)
+
+Run the following two commands to initialize your database:
+
+  - `psql where < where-api-tables.sql`
+  - `psql where < node_modules/express-pg-oauth/oauth-tables.sql`
 
 ### Digital Collections API token
 
