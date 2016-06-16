@@ -8,7 +8,7 @@
     "url": "git+https://github.com/nypl-spacetime/where-api.git"
   },
   "scripts": {
-    "test": "standard && mocha test"
+    "test": "standard && cross-env NODE_ENV=test mocha test"
   },
   "author": "NYPL Labs",
   "license": "MIT",
