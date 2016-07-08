@@ -1,0 +1,29 @@
+{
+  "server": {
+    "host": null,
+    "secret": null
+  },
+  "database": {
+    "url": null
+  },
+  "app": {
+    "name": "Space/Time Directory - Surveyor",
+    "url": null
+  },
+  "twitter": {
+    "key": null,
+    "secret": null
+  },
+  "facebook": {
+    "key": null,
+    "secret": null
+  },
+  "google": {
+    "key": null,
+    "secret": null
+  },
+  "github": {
+    "key": null,
+    "secret": null
+  }
+}

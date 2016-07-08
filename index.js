@@ -15,15 +15,22 @@ var app = express()
 var server = require('http').createServer(app)
 var io = require('socket.io')(server)
 
-if (!(process.env.SURVEYOR_API_CONFIG || argv.config)) {
-  console.error('Please set the --config command line option, or the SURVEYOR_API_CONFIG environment variable to the path of the configuration file')
-  process.exit(1)
+var config = require('./base-config.json')
+var userConfig = {}
+if (process.env.SURVEYOR_API_CONFIG || argv.config) {
+  userConfig = require(process.env.SURVEYOR_API_CONFIG || argv.config)
 }
 
-var config = require(process.env.SURVEYOR_API_CONFIG || argv.config)
+const envVar = (key1, key2) => `${key1.toUpperCase()}_${key2.toUpperCase()}`
+
+Object.keys(config).forEach((key1) => {
+  Object.keys(config[key1]).forEach((key2) => {
+    config[key1][key2] = process.env[envVar(key1, key2)] || userConfig[key1][key2] || config[key1][key2]
+  })
+})
 
 var oauth = require('express-pg-oauth')
-var db = require('./lib/db')(config)
+var db = require('./lib/db')(config.database.url)
 var initializeData = require('./lib/initialize-data')
 
 var PORT = process.env.PORT || 3011

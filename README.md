@@ -45,8 +45,10 @@ The configuration should have the following format:
 {
   "server": {
     "host": "surveyor-api.dev",
-    "pgConString": "postgres://postgres:postgres@localhost/surveyor",
     "secret": "secret-for-oauth-signing"
+  },
+  "database": {
+    "url": "postgres://postgres:postgres@localhost/surveyor",
   },
   "app": {
     "name": "Application name",

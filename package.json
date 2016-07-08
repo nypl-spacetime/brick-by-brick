@@ -27,7 +27,8 @@
     "express-pg-oauth": "nypl-spacetime/express-pg-oauth"
   },
   "devDependencies": {
-    "standard": "^6.0.8",
-    "mocha": "^2.5.3"
+    "cross-env": "^1.0.8",
+    "mocha": "^2.5.3",
+    "standard": "^6.0.8"
   }
 }
