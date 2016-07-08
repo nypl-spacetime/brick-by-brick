@@ -10,17 +10,17 @@ var geojsonhint = require('geojsonhint')
 var turf = {
   centroid: require('turf-centroid')
 }
-var wherePackage = require('./package')
+var surveyorPackage = require('./package')
 var app = express()
 var server = require('http').createServer(app)
 var io = require('socket.io')(server)
 
-if (!(process.env.WHERE_API_CONFIG || argv.config)) {
-  console.error('Please set the --config command line option, or the WHERE_API_CONFIG environment variable to the path of the configuration file')
+if (!(process.env.SURVEYOR_API_CONFIG || argv.config)) {
+  console.error('Please set the --config command line option, or the SURVEYOR_API_CONFIG environment variable to the path of the configuration file')
   process.exit(1)
 }
 
-var config = require(process.env.WHERE_API_CONFIG || argv.config)
+var config = require(process.env.SURVEYOR_API_CONFIG || argv.config)
 
 var oauth = require('express-pg-oauth')
 var db = require('./lib/db')(config)
@@ -54,8 +54,8 @@ function send500 (res, err) {
 
 app.get('/', (req, res) => {
   res.send({
-    title: wherePackage.description,
-    version: wherePackage.version
+    title: surveyorPackage.description,
+    version: surveyorPackage.version
   })
 })
 
@@ -381,5 +381,5 @@ app.get('/collections', function (req, res) {
 })
 
 server.listen(PORT, () => {
-  console.log(`NYPL Where API listening on PORT ${PORT}!`)
+  console.log(`${surveyorPackage.name} API listening on PORT ${PORT}!`)
 })

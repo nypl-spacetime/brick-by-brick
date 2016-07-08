@@ -1,12 +1,12 @@
 // Common db connector for tests
 
-if (!process.env.WHERE_API_CONFIG) throw new Error('Env var WHERE_API_CONFIG is not set.')
+if (!process.env.SURVEYOR_API_CONFIG) throw new Error('Environment variable SURVEYOR_API_CONFIG is not set.')
 if (process.env.NODE_ENV !== 'test') throw new Error('Tests must be run with NODE_ENV=test')
 
 // Require a test config file to avoid wiping non-test data
 // Assume test config path is default config path but with .test before extension
 // e.g. .config.test.json
-var configPath = process.env.WHERE_API_CONFIG.replace(/(\.json)?$/, '.test$1')
+var configPath = process.env.SURVEYOR_API_CONFIG.replace(/(\.json)?$/, '.test$1')
 var config
 try {
   config = require(configPath)

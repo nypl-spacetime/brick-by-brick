@@ -1,11 +1,11 @@
 {
-  "name": "where-api",
-  "version": "0.0.1",
-  "description": "NYPL Labs - Where? API",
+  "name": "surveyor-api",
+  "version": "1.0.0",
+  "description": "Space/Time Directory - Surveyor API",
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nypl-spacetime/where-api.git"
+    "url": "git+https://github.com/nypl-spacetime/surveyor-api.git"
   },
   "scripts": {
     "test": "standard && cross-env NODE_ENV=test mocha test"
