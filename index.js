@@ -16,7 +16,7 @@ var server = require('http').createServer(app)
 var io = require('socket.io')(server)
 
 var config = require('./base-config.json')
-var userConfig = {}
+var userConfig = Object.assign({}, config)
 if (process.env.SURVEYOR_API_CONFIG || argv.config) {
   userConfig = require(process.env.SURVEYOR_API_CONFIG || argv.config)
 }
