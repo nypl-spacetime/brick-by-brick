@@ -1,203 +1,63 @@
 'use strict'
 
+var argv = require('minimist')(process.argv.slice(2))
 var R = require('ramda')
 var express = require('express')
 var cors = require('cors')
-var jwt = require('jsonwebtoken')
 var request = require('request')
 var bodyParser = require('body-parser')
 var geojsonhint = require('geojsonhint')
 var turf = {
   centroid: require('turf-centroid')
 }
-var wherePackage = require('./package')
+var surveyorPackage = require('./package')
 var app = express()
 var server = require('http').createServer(app)
 var io = require('socket.io')(server)
-var pg = require('pg')
 
-var collections = require('./data/collections.json')
-
-if (!process.env.WHERE_PRIVATE_KEY) {
-  console.error('Please set WHERE_PRIVATE_KEY environment variable!')
-  process.exit(-1)
+if (!(process.env.SURVEYOR_API_CONFIG || argv.config)) {
+  console.error('Please set the --config command line option, or the SURVEYOR_API_CONFIG environment variable to the path of the configuration file')
+  process.exit(1)
 }
+
+var config = require(process.env.SURVEYOR_API_CONFIG || argv.config)
+
+var oauth = require('express-pg-oauth')
+var db = require('./lib/db')(config)
+var initializeData = require('./lib/initialize-data')
+
+var PORT = process.env.PORT || 3011
+
+app.use(cors({
+  origin: true,
+  credentials: true
+}))
 
 if (!process.env.DIGITAL_COLLECTIONS_TOKEN) {
   console.error('Please set DIGITAL_COLLECTIONS_TOKEN environment variable to use /mods API')
 }
 
-var KEY = process.env.WHERE_PRIVATE_KEY
 var DIGITAL_COLLECTIONS_TOKEN = process.env.DIGITAL_COLLECTIONS_TOKEN
 
 app.use(bodyParser.json())
 
-var headers = [
-  'Accept',
-  'Content-Type',
-  'Authorization',
-  'Content-Length',
-  'Connection',
-  'X-Powered-By'
-]
+app.use(oauth(config, db.updateUserIds))
 
-app.use(cors({
-  methods: [
-    'GET',
-    'POST'
-  ],
-  exposedHeaders: headers,
-  allowedHeaders: headers
-}))
+initializeData(db)
 
-// Enable CORS OPTIONS requests
-// https://github.com/expressjs/cors#enabling-cors-pre-flight
-app.options('*', cors())
-
-var PORT = process.env.PORT || 3000
-
-var items = {}
-var uuids
-
-// Load collection items for each collection in collections.json
-//   extent item data with UUID of collection itself
-var collectionData = collections
-  .filter((collection) => !collection.exclude)
-  .map((collection) => require(`./data/${collection.uuid}.json`)
-    .map((item) => R.merge(item, {collection: collection.uuid}))
-)
-
-R.flatten(collectionData)
-  .filter((item) => item.imageLink)
-  .forEach((item) => {
-    item.imageLink = item.imageLink.filter((imageLink) => {
-      return imageLink.includes('&t=w&')
-    })[0]
-
-    items[item.uuid] = item
-  })
-
-uuids = R.keys(items)
-
-// https://devcenter.heroku.com/articles/getting-started-with-nodejs#provision-a-database
-var pgConString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost/where'
-function executeQuery (query, values, callback) {
-  pg.connect(pgConString, (err, client, done) => {
-    if (err) {
-      callback(err)
-    } else {
-      client.query(query, values, (err, result) => {
-        done()
-        if (err) {
-          callback(err)
-        } else {
-          callback(null, result.rows)
-        }
-      })
-    }
+function send500 (res, err) {
+  res.status(500).send({
+    result: 'error',
+    message: err.message
   })
 }
-
-var tableName = 'locations'
-
-var tableExists = `SELECT COUNT(*)
-  FROM pg_catalog.pg_tables
-  WHERE schemaname = 'public'
-  AND tablename  = '${tableName}'`
-
-var createTable = `CREATE TABLE public.${tableName} (
-  uuid text NOT NULL,
-  session text NOT NULL,
-  step text NOT NULL,
-  step_index integer NOT NULL,
-  completed boolean NOT NULL,
-  image_id text,
-  date_created timestamp with time zone DEFAULT (current_timestamp at time zone 'UTC'),
-  date_modified timestamp with time zone DEFAULT (current_timestamp at time zone 'UTC'),
-  data jsonb,
-  client jsonb,
-  geometry json,
-  centroid point,
-  CONSTRAINT locations_pkey PRIMARY KEY (uuid, session, step)
-)`
-
-executeQuery(tableExists, null, (err, rows) => {
-  if (err) {
-    console.error('Error connecting to database:', err.message)
-    process.exit(-1)
-  } else {
-    if (!(rows && rows[0].count === '1')) {
-      console.log(`Table "${tableName}" does not exist - creating table...`)
-      executeQuery(createTable, null, function (err) {
-        if (err) {
-          console.error('Error creating table:', err.message)
-          process.exit(-1)
-        }
-      })
-    }
-  }
-})
 
 app.get('/', (req, res) => {
   res.send({
-    title: wherePackage.description,
-    version: wherePackage.version
+    title: surveyorPackage.description,
+    version: surveyorPackage.version
   })
 })
-
-app.get('/items', (req, res) => {
-  res.send(R.values(items))
-})
-
-function sendItem (req, res, uuid) {
-  if (!(uuid && items[uuid])) {
-    res.status(404).send({
-      result: 'error',
-      message: 'Not found'
-    })
-  } else {
-    res.send(items[uuid])
-  }
-}
-
-function randomString () {
-  var length = 32
-  var token = Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1)
-  return token
-}
-
-function checkOrCreateToken (req, res, next) {
-  if (!req.headers.authorization) {
-    var session = randomString()
-    var token = jwt.sign({ session: session }, KEY)
-    res.setHeader('Authorization', token)
-  } else {
-    res.setHeader('Authorization', req.headers.authorization)
-  }
-  next()
-}
-
-function checkToken (req, res, next) {
-  if (!req.headers.authorization) {
-    res.status(401).send({
-      result: 'error',
-      message: 'Not authorized'
-    })
-  } else {
-    var token = req.headers.authorization
-    jwt.verify(token, KEY, (err, decoded) => {
-      if (err) {
-        res.status(401).send({
-          result: 'error',
-          message: 'Not authorized'
-        })
-      } else {
-        req.session = decoded.session
-        next()
-      }
-    })
-  }
-}
 
 function emitEvent (row) {
   var feature = locationToFeature(row)
@@ -227,14 +87,51 @@ function locationsToGeoJson (rows) {
   }
 }
 
-app.get('/items/random', checkOrCreateToken, (req, res) => {
-  var uuid = uuids[Math.floor(Math.random() * uuids.length)]
-  sendItem(req, res, uuid)
+function sendItem (req, res, item) {
+  if (!item) {
+    res.status(404).send({
+      result: 'error',
+      message: 'Not found'
+    })
+  } else {
+    res.send(item)
+  }
+}
+
+// TODO: find out if ORDER BY RANDOM() scales!
+const randomItemQuery = `
+  SELECT *
+  FROM items
+  WHERE uuid NOT IN (
+    SELECT uuid
+    FROM submissions
+    WHERE user_id = $1
+  )
+  ORDER BY RANDOM() limit 1;`
+
+app.get('/items/random', (req, res) => {
+  db.executeQuery(randomItemQuery, [req.session.user.id], (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+    sendItem(req, res, rows[0])
+  })
 })
 
-app.get('/items/:uuid', checkOrCreateToken, (req, res) => {
-  var uuid = req.params.uuid
-  sendItem(req, res, uuid)
+const itemQuery = `
+  SELECT *
+  FROM items
+  WHERE uuid = $1`
+
+app.get('/items/:uuid', (req, res) => {
+  db.executeQuery(itemQuery, [req.params.uuid], (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+    sendItem(req, res, rows[0])
+  })
 })
 
 app.get('/items/:uuid/mods', (req, res) => {
@@ -273,39 +170,53 @@ app.get('/items/:uuid/mods', (req, res) => {
   }
 })
 
-app.post('/items/:uuid', checkToken, (req, res) => {
+function itemExists (req, res, next) {
+  db.itemExists(req.params.uuid, (err, exists) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+
+    if (exists) {
+      next()
+    } else {
+      res.status(404).send({
+        result: 'error',
+        message: 'Not found'
+      })
+    }
+  })
+}
+
+app.post('/items/:uuid', itemExists, (req, res) => {
   var row = {
     uuid: req.params.uuid,
-    session: null,
+    user_id: null,
     step: null,
     step_index: null,
-    image_id: null,
-    completed: null,
+    skipped: null,
     data: null,
     client: null,
     geometry: null,
     centroid: null
   }
 
-  // Check if UUID exists in available collections, return 404 otherwise
-  if (!(row.uuid && items[row.uuid])) {
-    res.status(404).send({
-      result: 'error',
-      message: 'Not found'
-    })
-    return
-  }
-
-  row.image_id = items[row.uuid].imageID
-
   // POST data should be GeoJSON feature (with optional geometry)
   //   properties should contain:
   //     - step
   //     - stepIndex
-  //     - completed
-  //   if properties.completed == true,
+  //     - skipped
+  //   if properties.skipped == false,
   //     properties.data should contain step data
   var feature = req.body
+
+  if (!feature || !feature.properties || feature.type !== 'Feature') {
+    res.status(406).send({
+      result: 'error',
+      message: 'POST data should be GeoJSON Feature'
+    })
+    return
+  }
 
   // Check if step and stepIndex are present in properties
   if (!(feature.properties.step && feature.properties.stepIndex >= 0)) {
@@ -318,7 +229,7 @@ app.post('/items/:uuid', checkToken, (req, res) => {
   row.step = feature.properties.step
   row.step_index = feature.properties.stepIndex
 
-  if (feature.properties.completed) {
+  if (!feature.properties.skipped) {
     if (!feature.properties.data) {
       res.status(406).send({
         result: 'error',
@@ -326,7 +237,7 @@ app.post('/items/:uuid', checkToken, (req, res) => {
       })
       return
     }
-    row.completed = true
+    row.skipped = false
     row.data = JSON.stringify(feature.properties.data)
   } else {
     if (feature.properties.data || feature.properties.data) {
@@ -337,7 +248,7 @@ app.post('/items/:uuid', checkToken, (req, res) => {
       return
     }
 
-    row.completed = false
+    row.skipped = true
   }
 
   if (feature.geometry) {
@@ -358,8 +269,8 @@ app.post('/items/:uuid', checkToken, (req, res) => {
     }
   }
 
-  // Get session ID, checkToken function stores correct sessions in req.session
-  row.session = req.session
+  // Get user ID
+  row.user_id = req.session.user.id
 
   // Get information about client
   var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
@@ -369,23 +280,25 @@ app.post('/items/:uuid', checkToken, (req, res) => {
   row.client = JSON.stringify(client)
 
   var columns = R.keys(row)
-  var placeholders = Array.from(new Array(columns.length), (x, i) => i + 1).map((i) => `$${i}`)
+  var placeholders = columns.map((column, i) => `$${i + 1}`)
   var values = placeholders.join(', ')
-  var query = `INSERT INTO locations (${columns.join(', ')})
-    VALUES (${values})
-    ON CONFLICT (uuid, session, step)
-    WHERE NOT completed
+  var query = `INSERT INTO submissions (image_id, ${columns.join(', ')})
+      SELECT image_id, ${values}
+      FROM items
+      WHERE uuid = $1
+    ON CONFLICT (uuid, user_id, step)
+    WHERE NOT skipped
     DO UPDATE SET
       step_index = EXCLUDED.step_index,
-      completed = EXCLUDED.completed,
+      skipped = EXCLUDED.skipped,
       date_modified = current_timestamp at time zone 'UTC',
       data = EXCLUDED.data,
       client = EXCLUDED.client,
       geometry = EXCLUDED.geometry,
       centroid = EXCLUDED.centroid
-    WHERE EXCLUDED.completed;`
+    WHERE NOT EXCLUDED.skipped;`
 
-  executeQuery(query, R.values(row), (err) => {
+  db.executeQuery(query, R.values(row), (err) => {
     if (err) {
       res.status(500).send({
         result: 'error',
@@ -403,20 +316,10 @@ app.post('/items/:uuid', checkToken, (req, res) => {
   })
 })
 
-var locationsQuery = `
-  SELECT * FROM (
-    SELECT uuid, session, MAX(step_index) AS max_step
-    FROM locations
-    WHERE completed
-    GROUP BY uuid, session
-  ) AS s
-  JOIN locations l
-  ON l.step_index = max_step AND s.uuid = l.uuid AND s.session = l.session
-  ORDER BY date_modified DESC
-`
+app.get('/submissions', (req, res) => {
+  var query = db.makeSubmissionsQuery(req.session.user.id)
 
-app.get('/locations', (req, res) => {
-  executeQuery(locationsQuery, null, (err, rows) => {
+  db.executeQuery(query, [req.session.user.id], (err, rows) => {
     if (err) {
       res.status(500).send({
         result: 'error',
@@ -428,8 +331,9 @@ app.get('/locations', (req, res) => {
   })
 })
 
-app.get('/locations/latest', (req, res) => {
-  executeQuery(`${locationsQuery} LIMIT 500`, null, (err, rows) => {
+app.get('/submissions/all', (req, res) => {
+  var query = db.makeSubmissionsQuery(null, 1000)
+  db.executeQuery(query, null, (err, rows) => {
     if (err) {
       res.status(500).send({
         result: 'error',
@@ -440,11 +344,42 @@ app.get('/locations/latest', (req, res) => {
     }
   })
 })
+
+app.get('/submissions/count', (req, res) => {
+  var query = `
+    SELECT COUNT(*)::int AS count
+    FROM (
+      ${db.makeSubmissionsQuery(req.session.user.id)}
+    ) s;`
+
+  db.executeQuery(query, [req.session.user.id], (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+
+    var count = (rows[0] && rows[0].count) || 0
+    res.send({
+      completed: count
+    })
+  })
+})
+
+var collectionsQuery = `
+  SELECT *
+  FROM collections;`
 
 app.get('/collections', function (req, res) {
-  res.send(collections)
+  db.executeQuery(collectionsQuery, null, (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+
+    res.send(rows)
+  })
 })
 
 server.listen(PORT, () => {
-  console.log(`NYPL Where API listening on PORT ${PORT}!`)
+  console.log(`${surveyorPackage.name} API listening on PORT ${PORT}!`)
 })

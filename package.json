@@ -1,14 +1,14 @@
 {
-  "name": "where-api",
-  "version": "0.0.1",
-  "description": "NYPL Labs - Where API",
+  "name": "surveyor-api",
+  "version": "1.0.0",
+  "description": "Space/Time Directory - Surveyor API",
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nypl-spacetime/where-api.git"
+    "url": "git+https://github.com/nypl-spacetime/surveyor-api.git"
   },
   "scripts": {
-    "test": "standard"
+    "test": "standard && cross-env NODE_ENV=test mocha test"
   },
   "author": "NYPL Labs",
   "license": "MIT",
@@ -17,14 +17,17 @@
     "cors": "^2.7.1",
     "express": "^4.13.3",
     "geojsonhint": "^1.1.0",
-    "jsonwebtoken": "^5.5.4",
+    "highland": "^2.8.1",
+    "minimist": "^1.2.0",
     "pg": "^4.4.3",
     "ramda": "^0.19.1",
     "request": "^2.69.0",
     "socket.io": "^1.4.5",
-    "turf-centroid": "^1.1.3"
+    "turf-centroid": "^1.1.3",
+    "express-pg-oauth": "nypl-spacetime/express-pg-oauth"
   },
   "devDependencies": {
-    "standard": "^6.0.8"
+    "standard": "^6.0.8",
+    "mocha": "^2.5.3"
   }
 }
