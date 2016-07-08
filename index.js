@@ -29,6 +29,8 @@ Object.keys(config).forEach((key1) => {
   })
 })
 
+console.log(config)
+
 var oauth = require('express-pg-oauth')
 var db = require('./lib/db')(config.database.url)
 var initializeData = require('./lib/initialize-data')
