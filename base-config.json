@@ -6,6 +6,9 @@
   "database": {
     "url": null
   },
+  "digital_collections": {
+    "token": null
+  },
   "app": {
     "name": "Space/Time Directory - Surveyor",
     "url": null

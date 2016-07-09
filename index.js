@@ -40,12 +40,6 @@ app.use(cors({
   credentials: true
 }))
 
-if (!process.env.DIGITAL_COLLECTIONS_TOKEN) {
-  console.error('Please set DIGITAL_COLLECTIONS_TOKEN environment variable to use /mods API')
-}
-
-var DIGITAL_COLLECTIONS_TOKEN = process.env.DIGITAL_COLLECTIONS_TOKEN
-
 app.use(bodyParser.json())
 
 app.use(oauth(config, db.updateUserIds))
@@ -144,7 +138,7 @@ app.get('/items/:uuid', (req, res) => {
 app.get('/items/:uuid/mods', (req, res) => {
   var uuid = req.params.uuid
 
-  if (!DIGITAL_COLLECTIONS_TOKEN) {
+  if (!config.digital_collections.token) {
     res.status(401).send({
       result: 'error',
       message: 'Not authorized'
@@ -155,7 +149,7 @@ app.get('/items/:uuid/mods', (req, res) => {
       url: url,
       json: true,
       headers: {
-        Authorization: `Token token="${DIGITAL_COLLECTIONS_TOKEN}"`
+        Authorization: `Token token="${config.digital_collections.token}"`
       }
     }, function (error, response, body) {
       if (error) {
