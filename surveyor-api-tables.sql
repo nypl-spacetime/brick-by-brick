@@ -14,6 +14,8 @@ CREATE TABLE public.items (
   CONSTRAINT items_pkey PRIMARY KEY (uuid)
 );
 
+CREATE INDEX item_uuid ON items (uuid);
+
 CREATE TABLE public.submissions (
   uuid text NOT NULL,
   user_id int NOT NULL,
@@ -29,3 +31,6 @@ CREATE TABLE public.submissions (
   centroid point,
   CONSTRAINT submissions_pkey PRIMARY KEY (uuid, user_id, step)
 );
+
+CREATE INDEX submissions_skipped_user_id ON submissions (skipped, user_id);
+CREATE INDEX submissions_user_id_uuid_step_index ON submissions (user_id, uuid, step_index);
