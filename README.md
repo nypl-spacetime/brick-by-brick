@@ -89,10 +89,9 @@ The API listens on port 3011 by default, change this by setting the `PORT` envir
 
 ### Items
 
-- `GET /items/:uuid`: get a single collection item, with UUID `:uuid`
+- `GET /items/:provider/:id`: get a single collection item, with provider `:provider` and ID `:id`
 - `GET /items/random`: get random collection item which has not been geolocated by the user associated with the current session
-- `POST /items/:uuid`: send new location of item with UUID `:uuid`. POST data should be of the following form:
-- `GET /items/:uuid/mods`: get NYPL Digital Collections API MODS metadata for item with UUID `:uuid`
+- `POST /items/:provider/:id`: send new location of item with provider `:provider` and ID `:id`. POST data should be of the following form:
 
 ```json
 {
@@ -139,23 +138,7 @@ The Surveryor API provides a [Socket.IO](http://socket.io/) which emits GeoJSON 
 
 ## Data
 
-Install NYPL's [Digital Collections API Client](https://github.com/NYPL-publicdomain/api-client) (and obtain an API access token):
-
-    npm install -g digital-collections
-
-And, install [jq](https://stedolan.github.io/jq/):
-
-    brew install jq
-
-Then, download and parse a image collection:
-
-```bash
-digital-collections -u 22f5f390-c5f0-012f-2796-58d385a7bc34 | \
-jq  '[.[] | {uuid: .uuid, title: .title, imageLink: .imageLinks.imageLink}]' > \
-data/22f5f390-c5f0-012f-2796-58d385a7bc34.json
-```
-
-(Or run `./fetch.sh 22f5f390-c5f0-012f-2796-58d385a7bc34`!)
+See https://github.com/nypl-spacetime/dc-to-surveyor.
 
 ## Heroku
 

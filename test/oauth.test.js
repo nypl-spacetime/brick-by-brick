@@ -16,7 +16,8 @@ describe('OAuth', function () {
     var rows = [
       // User1 completes two steps:
       {
-        uuid: 'uuid',
+        item_provider: 'nypl',
+        item_id: 'id',
         user_id: 1,
         step: 'first step',
         data: '{"data": "original data step 1"}',
@@ -25,7 +26,8 @@ describe('OAuth', function () {
         date_modified: '2016-06-14 01:00:00'
       },
       {
-        uuid: 'uuid',
+        item_provider: 'nypl',
+        item_id: 'id',
         user_id: 1,
         step: 'second step',
         data: '{"data": "original data step 2"}',
@@ -35,7 +37,8 @@ describe('OAuth', function () {
       },
       // User2 completes two steps:
       {
-        uuid: 'uuid',
+        item_provider: 'nypl',
+        item_id: 'id',
         user_id: 2,
         step: 'first step',
         step_index: 0,
@@ -43,7 +46,8 @@ describe('OAuth', function () {
         date_modified: '2016-06-15 01:00:00'
       },
       {
-        uuid: 'uuid',
+        item_provider: 'nypl',
+        item_id: 'id',
         user_id: 2,
         step: 'second step',
         data: '{"data": "newer data step 2"}',
@@ -53,7 +57,8 @@ describe('OAuth', function () {
       },
       // User3 completes 1 step, skips second step:
       {
-        uuid: 'uuid',
+        item_provider: 'nypl',
+        item_id: 'id',
         user_id: 3,
         step: 'first step',
         data: '{"data": "newer data"}',
@@ -62,7 +67,8 @@ describe('OAuth', function () {
         date_modified: '2016-06-16 01:00:00'
       },
       {
-        uuid: 'uuid',
+        item_provider: 'nypl',
+        item_id: 'id',
         user_id: 3,
         step: 'second step',
         step_index: 0,
