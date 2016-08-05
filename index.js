@@ -4,7 +4,6 @@ var argv = require('minimist')(process.argv.slice(2))
 var R = require('ramda')
 var express = require('express')
 var cors = require('cors')
-var request = require('request')
 var bodyParser = require('body-parser')
 var geojsonhint = require('geojsonhint')
 var turf = {
@@ -16,7 +15,7 @@ var server = require('http').createServer(app)
 var io = require('socket.io')(server)
 
 var config = require('./base-config.json')
-var userConfig = {}
+var userConfig = Object.assign({}, config)
 if (process.env.SURVEYOR_API_CONFIG || argv.config) {
   userConfig = require(process.env.SURVEYOR_API_CONFIG || argv.config)
 }
@@ -31,7 +30,6 @@ Object.keys(config).forEach((key1) => {
 
 var oauth = require('express-pg-oauth')
 var db = require('./lib/db')(config.database.url)
-var initializeData = require('./lib/initialize-data')
 
 var PORT = process.env.PORT || 3011
 
@@ -40,17 +38,9 @@ app.use(cors({
   credentials: true
 }))
 
-if (!process.env.DIGITAL_COLLECTIONS_TOKEN) {
-  console.error('Please set DIGITAL_COLLECTIONS_TOKEN environment variable to use /mods API')
-}
-
-var DIGITAL_COLLECTIONS_TOKEN = process.env.DIGITAL_COLLECTIONS_TOKEN
-
 app.use(bodyParser.json())
 
 app.use(oauth(config, db.updateUserIds))
-
-initializeData(db)
 
 function send500 (res, err) {
   res.status(500).send({
@@ -75,12 +65,12 @@ function locationToFeature (row) {
   return {
     type: 'Feature',
     properties: {
-      uuid: row.uuid,
-      imageId: row.image_id,
+      provider: row.provider,
+      id: row.id,
       step: row.step,
       completed: row.completed,
       date: row.date_modified,
-      url: 'http://digitalcollections.nypl.org/items/' + row.uuid,
+      url: row.url,
       data: row.data
     },
     geometry: row.geometry
@@ -109,8 +99,8 @@ function sendItem (req, res, item) {
 const randomItemQuery = `
   SELECT *
   FROM items
-  WHERE uuid NOT IN (
-    SELECT uuid
+  WHERE (provider, id) NOT IN (
+    SELECT item_provider, item_id
     FROM submissions
     WHERE user_id = $1
   )
@@ -129,10 +119,10 @@ app.get('/items/random', (req, res) => {
 const itemQuery = `
   SELECT *
   FROM items
-  WHERE uuid = $1`
+  WHERE provider = $1 AND id = $2`
 
-app.get('/items/:uuid', (req, res) => {
-  db.executeQuery(itemQuery, [req.params.uuid], (err, rows) => {
+app.get('/items/:provider/:id', (req, res) => {
+  db.executeQuery(itemQuery, [req.params.provider, req.params.id], (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -141,44 +131,8 @@ app.get('/items/:uuid', (req, res) => {
   })
 })
 
-app.get('/items/:uuid/mods', (req, res) => {
-  var uuid = req.params.uuid
-
-  if (!DIGITAL_COLLECTIONS_TOKEN) {
-    res.status(401).send({
-      result: 'error',
-      message: 'Not authorized'
-    })
-  } else {
-    var url = `http://api.repo.nypl.org/api/v1/items/mods_captures/${uuid}`
-    request({
-      url: url,
-      json: true,
-      headers: {
-        Authorization: `Token token="${DIGITAL_COLLECTIONS_TOKEN}"`
-      }
-    }, function (error, response, body) {
-      if (error) {
-        res.status(500).send({
-          result: 'error',
-          message: error
-        })
-      } else {
-        if (body && body.nyplAPI && body.nyplAPI.response && body.nyplAPI.response.mods) {
-          res.send(body.nyplAPI.response.mods)
-        } else {
-          res.status(406).send({
-            result: 'error',
-            message: 'Cannot parse MODS result'
-          })
-        }
-      }
-    })
-  }
-})
-
 function itemExists (req, res, next) {
-  db.itemExists(req.params.uuid, (err, exists) => {
+  db.itemExists(req.params.provider, req.params.id, (err, exists) => {
     if (err) {
       send500(res, err)
       return
@@ -195,9 +149,10 @@ function itemExists (req, res, next) {
   })
 }
 
-app.post('/items/:uuid', itemExists, (req, res) => {
+app.post('/items/:provider/:id', itemExists, (req, res) => {
   var row = {
-    uuid: req.params.uuid,
+    item_provider: req.params.provider,
+    item_id: req.params.id,
     user_id: null,
     step: null,
     step_index: null,
@@ -289,11 +244,9 @@ app.post('/items/:uuid', itemExists, (req, res) => {
   var columns = R.keys(row)
   var placeholders = columns.map((column, i) => `$${i + 1}`)
   var values = placeholders.join(', ')
-  var query = `INSERT INTO submissions (image_id, ${columns.join(', ')})
-      SELECT image_id, ${values}
-      FROM items
-      WHERE uuid = $1
-    ON CONFLICT (uuid, user_id, step)
+  var query = `INSERT INTO submissions (${columns.join(', ')})
+      VALUES (${values})
+    ON CONFLICT (item_provider, item_id, user_id, step)
     WHERE NOT skipped
     DO UPDATE SET
       step_index = EXCLUDED.step_index,
