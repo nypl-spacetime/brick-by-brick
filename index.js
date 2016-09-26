@@ -102,12 +102,12 @@ const randomItemQuery = `
   WHERE (provider, id) NOT IN (
     SELECT item_provider, item_id
     FROM submissions
-    WHERE user_id = $1
-  )
+    WHERE user_id = $1 AND provider = $2
+  ) AND provider = $2
   ORDER BY RANDOM() limit 1;`
 
-app.get('/items/random', (req, res) => {
-  db.executeQuery(randomItemQuery, [req.session.user.id], (err, rows) => {
+app.get('/items/:provider/random', (req, res) => {
+  db.executeQuery(randomItemQuery, [req.session.user.id, req.params.provider], (err, rows) => {
     if (err) {
       send500(res, err)
       return
