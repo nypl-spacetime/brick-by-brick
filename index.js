@@ -1,6 +1,7 @@
 'use strict'
 
 var argv = require('minimist')(process.argv.slice(2))
+var H = require('highland')
 var R = require('ramda')
 var express = require('express')
 var cors = require('cors')
@@ -56,58 +57,85 @@ app.get('/', (req, res) => {
   })
 })
 
-function emitEvent (row) {
-  var feature = locationToFeature(row)
-  io.emit('feature', feature)
-}
+const tasksQuery = `
+  SELECT DISTINCT ON (task) unnest(tasks) AS task
+  FROM collections;`
 
-function locationToFeature (row) {
-  return {
-    type: 'Feature',
-    properties: {
-      provider: row.provider,
-      id: row.id,
-      step: row.step,
-      completed: row.completed,
-      date: row.date_modified,
-      url: row.url,
-      data: row.data
-    },
-    geometry: row.geometry
-  }
-}
+app.get('/tasks', (req, res) => {
+  db.executeQuery(tasksQuery, [], (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+    res.send(rows.map((row) => row.task))
+  })
+})
 
-function locationsToGeoJson (rows) {
-  return {
-    type: 'FeatureCollection',
-    features: rows.map(locationToFeature)
-  }
-}
+const filterNullValues = (obj) => R.pickBy((val, key) => val !== null, obj)
 
-function sendItem (req, res, item) {
-  if (!item) {
+function sendItem (req, res, row) {
+  if (!row) {
     res.status(404).send({
       result: 'error',
       message: 'Not found'
     })
   } else {
-    res.send(item)
+    res.send(filterNullValues({
+      provider: row.provider,
+      id: row.item_id,
+      data: row.item_data,
+      collection: filterNullValues({
+        id: row.collection_id,
+        title: row.collection_title,
+        url: row.collection_url,
+        tasks: row.collection_tasks,
+        data: row.collection_data
+      })
+    }))
   }
 }
 
-// TODO: find out if ORDER BY RANDOM() scales!
-const randomItemQuery = `
-  SELECT *
+const allItemsQuery = `
+  SELECT
+    items.provider,
+    items.id AS item_id,
+    items.data AS item_data,
+    collections.id AS collection_id,
+    collections.title AS collection_title,
+    collections.url AS collection_url,
+    collections.tasks AS collection_tasks,
+    collections.data AS collection_data
   FROM items
-  WHERE (provider, id) NOT IN (
+  JOIN collections ON (collections.id = items.collection_id)`
+
+const randomItemQuery = `
+  ${allItemsQuery}
+  WHERE (items.provider, items.id) NOT IN (
     SELECT item_provider, item_id
     FROM submissions
-    WHERE user_id = $1 AND provider = $2
-  ) AND provider = $2
-  ORDER BY RANDOM() limit 1;`
+    WHERE user_id = $1 AND task = $2
+  ) AND $3 @> tasks AND (
+    collections.submissions_needed = -1
+    OR NOT EXISTS (
+      SELECT * FROM submission_counts
+      WHERE
+        item_provider = items.provider AND
+        item_id = items.id AND
+        task = $2
+    ) OR (
+      SELECT count FROM submission_counts
+      WHERE
+        item_provider = items.provider AND
+        item_id = items.id AND
+        task = $2
+    ) < collections.submissions_needed
+  )
+  ORDER BY RANDOM() LIMIT 1;`
 
-app.get('/items/:provider/random', (req, res) => {
-  db.executeQuery(randomItemQuery, [req.session.user.id, req.params.provider], (err, rows) => {
+// TODO: add ?provider=:provider&collection=:collectionId
+// TODO: see if ORDER BY RANDOM() LIMIT 1 scales
+app.get('/tasks/:task/items/random', (req, res) => {
+  db.executeQuery(randomItemQuery, [req.session.user.id, req.params.task, [req.params.task]], (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -117,9 +145,8 @@ app.get('/items/:provider/random', (req, res) => {
 })
 
 const itemQuery = `
-  SELECT *
-  FROM items
-  WHERE provider = $1 AND id = $2`
+  ${allItemsQuery}
+  WHERE items.provider = $1 AND items.id = $2;`
 
 app.get('/items/:provider/:id', (req, res) => {
   db.executeQuery(itemQuery, [req.params.provider, req.params.id], (err, rows) => {
@@ -153,82 +180,66 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
   var row = {
     item_provider: req.params.provider,
     item_id: req.params.id,
+    task: null,
     user_id: null,
     step: null,
     step_index: null,
     skipped: null,
     data: null,
-    client: null,
-    geometry: null,
-    centroid: null
+    client: null
   }
 
-  // POST data should be GeoJSON feature (with optional geometry)
-  //   properties should contain:
+  // POST data should contain:
+  //     - task
   //     - step
   //     - stepIndex
-  //     - skipped
-  //   if properties.skipped == false,
-  //     properties.data should contain step data
-  var feature = req.body
+  //   if skipped == true,
+  //     data should be undefined
 
-  if (!feature || !feature.properties || feature.type !== 'Feature') {
+  if (!req.body) {
     res.status(406).send({
       result: 'error',
-      message: 'POST data should be GeoJSON Feature'
+      message: 'POST data should not be empty'
     })
     return
   }
 
-  // Check if step and stepIndex are present in properties
-  if (!(feature.properties.step && feature.properties.stepIndex >= 0)) {
+  var body = req.body
+
+  if (!body.task || !body.task.length) {
     res.status(406).send({
       result: 'error',
-      message: 'Feature should contain step and stepIndex'
+      message: 'No task specified'
     })
     return
   }
-  row.step = feature.properties.step
-  row.step_index = feature.properties.stepIndex
 
-  if (!feature.properties.skipped) {
-    if (!feature.properties.data) {
-      res.status(406).send({
-        result: 'error',
-        message: 'Completed steps should contain data'
-      })
-      return
-    }
-    row.skipped = false
-    row.data = JSON.stringify(feature.properties.data)
-  } else {
-    if (feature.properties.data || feature.properties.data) {
-      res.status(406).send({
-        result: 'error',
-        message: 'Only completed steps should contain data or geometry'
-      })
-      return
-    }
+  row.task = body.task
 
+  const hasData = body.data && R.keys(body.data).length
+  if (body.skipped && !hasData) {
     row.skipped = true
+  } else if (!body.skipped && hasData) {
+    row.data = body.data
+    row.skipped = false
+  } else {
+    res.status(406).send({
+      result: 'error',
+      message: 'Only completed steps should contain data - and skipped steps should not'
+    })
+    return
   }
 
-  if (feature.geometry) {
-    var geojsonErrors = geojsonhint.hint(feature).map((err) => err.message)
-    if (geojsonErrors.length > 0) {
-      res.status(406).send({
-        result: 'error',
-        message: geojsonErrors.length === 1 ? geojsonErrors[0] : geojsonErrors
-      })
-      return
-    }
-    row.geometry = JSON.stringify(feature.geometry)
+  const DEFAULT_STEP = 'default'
+  const DEFAULT_STEP_INDEX = 0
 
-    // Compute centroid of geometry
-    var centroid = turf.centroid(feature.geometry)
-    if (centroid) {
-      row.centroid = centroid.geometry.coordinates.join(',')
-    }
+  // Check if step and stepIndex are present in body
+  if (body.step && body.stepIndex >= 0) {
+    row.step = body.step
+    row.step_index = body.stepIndex
+  } else {
+    row.step = DEFAULT_STEP
+    row.step_index = DEFAULT_STEP_INDEX
   }
 
   // Get user ID
@@ -246,29 +257,28 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
   var values = placeholders.join(', ')
   var query = `INSERT INTO submissions (${columns.join(', ')})
       VALUES (${values})
-    ON CONFLICT (item_provider, item_id, user_id, step)
+    ON CONFLICT (item_provider, item_id, user_id, task, step)
     WHERE NOT skipped
     DO UPDATE SET
       step_index = EXCLUDED.step_index,
       skipped = EXCLUDED.skipped,
       date_modified = current_timestamp at time zone 'UTC',
       data = EXCLUDED.data,
-      client = EXCLUDED.client,
-      geometry = EXCLUDED.geometry,
-      centroid = EXCLUDED.centroid
+      client = EXCLUDED.client
     WHERE NOT EXCLUDED.skipped;`
 
   db.executeQuery(query, R.values(row), (err) => {
     if (err) {
+      console.log(err)
       res.status(500).send({
         result: 'error',
         message: err.message
       })
     } else {
-      emitEvent(Object.assign(row, {
-        data: feature.properties.data,
-        geometry: feature.geometry
-      }))
+      // emitEvent(Object.assign(row, {
+      //   data: feature.properties.data,
+      //   geometry: feature.geometry
+      // }))
       res.send({
         result: 'success'
       })
@@ -276,43 +286,99 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
   })
 })
 
-app.get('/submissions', (req, res) => {
-  var query = db.makeSubmissionsQuery(req.session.user.id)
+// function emitEvent (row) {
+//   var feature = locationToFeature(row)
+//   io.emit('feature', feature)
+// }
 
-  db.executeQuery(query, [req.session.user.id], (err, rows) => {
+const submissionRowToJson = (row) => ({
+  collection: {
+    id: row.collection_id
+  },
+  item: {
+    provider: row.item_provider,
+    id: row.item_id,
+    data: row.item_data
+  },
+  task: row.task,
+  step: row.step,
+  skipped: row.skipped ? true : null,
+  data: row.data,
+  dateCreated: row.date_created,
+  dateModified: row.date_modified
+})
+
+const collectionRowToJson = (row) => ({
+  id: row.id,
+  tasks: row.tasks,
+  title: row.title,
+  url: row.url,
+  submissionsNeeded: row.submissions_needed,
+  data: row.data
+})
+
+app.get('/tasks/:task/submissions', (req, res) => {
+  const task = req.params.task
+  const userId = req.session.user.id
+  var query = db.makeSubmissionsQuery(task, userId)
+
+  db.executeQuery(query, [task, req.session.user.id], (err, rows) => {
     if (err) {
       res.status(500).send({
         result: 'error',
         message: err.message
       })
     } else {
-      res.send(locationsToGeoJson(rows))
+      res.send(rows.map(submissionRowToJson).map(filterNullValues))
     }
   })
 })
 
-app.get('/submissions/all', (req, res) => {
-  var query = db.makeSubmissionsQuery(null, 1000)
-  db.executeQuery(query, null, (err, rows) => {
+app.get('/tasks/:task/submissions/all', (req, res) => {
+  const task = req.params.task
+  var query = db.makeSubmissionsQuery(task, null, 1000)
+  db.executeQuery(query, [task], (err, rows) => {
     if (err) {
       res.status(500).send({
         result: 'error',
         message: err.message
       })
     } else {
-      res.send(locationsToGeoJson(rows))
+      res.send(rows.map(submissionRowToJson).map(filterNullValues))
     }
   })
 })
 
-app.get('/submissions/count', (req, res) => {
+app.get('/tasks/:task/submissions/all.ndjson', (req, res) => {
+  const task = req.params.task
+  var query = db.makeSubmissionsQuery(task)
+
+  var stream = db.streamQuery(query, [task], (err, stream) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+
+    // res.type('application/x-ndjson')
+    H(stream)
+      .map(submissionRowToJson)
+      .map(filterNullValues)
+      .map(JSON.stringify)
+      .intersperse('\n')
+      .pipe(res)
+  })
+})
+
+app.get('/tasks/:task/submissions/count', (req, res) => {
+  const task = req.params.task
+  const userId = req.session.user.id
   var query = `
     SELECT COUNT(*)::int AS count
     FROM (
-      ${db.makeSubmissionsQuery(req.session.user.id)}
+      ${db.makeSubmissionsQuery(task, userId)}
     ) s;`
 
-  db.executeQuery(query, [req.session.user.id], (err, rows) => {
+  db.executeQuery(query, [task, userId], (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -327,16 +393,43 @@ app.get('/submissions/count', (req, res) => {
 
 var collectionsQuery = `
   SELECT *
-  FROM collections;`
+  FROM collections
+  WHERE provider = $1;`
 
-app.get('/collections', function (req, res) {
-  db.executeQuery(collectionsQuery, null, (err, rows) => {
+app.get('/providers/:providerId/collections', (req, res) => {
+  db.executeQuery(collectionsQuery, [req.params.providerId], (err, rows) => {
     if (err) {
       send500(res, err)
       return
     }
 
-    res.send(rows)
+    res.send(rows.map(collectionRowToJson).map(filterNullValues))
+  })
+})
+
+var collectionQuery = `
+  SELECT *
+  FROM collections
+  WHERE provider = $1 AND id = $2;`
+
+app.get('/providers/:providerId/collections/:collectionId', (req, res) => {
+  db.executeQuery(collectionQuery, [req.params.providerId, req.params.colletionId], (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+
+    const collection = rows[0]
+
+    if (!collection) {
+      res.status(404).send({
+        result: 'error',
+        message: 'Not found'
+      })
+      return
+    }
+
+    res.send(filterNullValues(collectionRowToJson(collection)))
   })
 })
 
