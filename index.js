@@ -6,19 +6,18 @@ var R = require('ramda')
 var express = require('express')
 var cors = require('cors')
 var bodyParser = require('body-parser')
-var geojsonhint = require('geojsonhint')
-var turf = {
-  centroid: require('turf-centroid')
-}
-var surveyorPackage = require('./package')
+var brickByBrickPackage = require('./package')
 var app = express()
 var server = require('http').createServer(app)
 var io = require('socket.io')(server)
 
 var config = require('./base-config.json')
 var userConfig = Object.assign({}, config)
-if (process.env.SURVEYOR_API_CONFIG || argv.config) {
-  userConfig = require(process.env.SURVEYOR_API_CONFIG || argv.config)
+
+var configFound = false
+if (process.env.BRICK_BY_BRICK_API_CONFIG || argv.config) {
+  userConfig = require(process.env.BRICK_BY_BRICK_API_CONFIG || argv.config)
+  configFound = true
 }
 
 const envVar = (key1, key2) => `${key1.toUpperCase()}_${key2.toUpperCase()}`
@@ -26,8 +25,17 @@ const envVar = (key1, key2) => `${key1.toUpperCase()}_${key2.toUpperCase()}`
 Object.keys(config).forEach((key1) => {
   Object.keys(config[key1]).forEach((key2) => {
     config[key1][key2] = process.env[envVar(key1, key2)] || userConfig[key1][key2] || config[key1][key2]
+
+    if (process.env[envVar(key1, key2)]) {
+      configFound = true  
+    }    
   })
 })
+
+if (!configFound) {
+  console.error('No config found, set BRICK_BY_BRICK_API_CONFIG, use --config, or set per-item environment variables')
+  process.exit(1)
+}
 
 var oauth = require('express-pg-oauth')
 var db = require('./lib/db')(config.database.url)
@@ -52,8 +60,8 @@ function send500 (res, err) {
 
 app.get('/', (req, res) => {
   res.send({
-    title: surveyorPackage.description,
-    version: surveyorPackage.version
+    title: brickByBrickPackage.description,
+    version: brickByBrickPackage.version
   })
 })
 
@@ -434,5 +442,5 @@ app.get('/providers/:providerId/collections/:collectionId', (req, res) => {
 })
 
 server.listen(PORT, () => {
-  console.log(`${surveyorPackage.name} API listening on PORT ${PORT}!`)
+  console.log(`${brickByBrickPackage.name} API listening on PORT ${PORT}!`)
 })
