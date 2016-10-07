@@ -1,54 +1,52 @@
-# Space/Time Directory - Surveyor API
+# Space/Time Directory - brick-by-brick
 
-API for [Space/Time Directory - Surveyor](https://github.com/nypl-spacetime/surveyor), a tool for crowdsourced geolocating of items from the NYPL's [Digital Collections](http://digitalcollections.nypl.org/).
+Simple JSON API for small crowdsourcing apps, used in different [NYC Space/Time Directory](http://spacetime.nypl.org/) projects:
+
+- https://github.com/nypl-spacetime/surveyor
+- https://github.com/nypl-spacetime/label-fields
+- https://github.com/nypl-spacetime/tagmap
 
 ## Installation & usage
 
 First, clone the GitHub repository:
 
-    git clone https://github.com/nypl-spacetime/surveyor-api.git
+    git clone https://github.com/nypl-spacetime/brick-by-brick.git
 
 Then, install all Node.js dependencies:
 
-    cd surveyor-api
+    cd brick-by-brick
     npm install
 
-Surveyor API needs a PostgreSQL database to store geotagged images. Make sure PostgreSQL is installed and is running. By default, the API uses the following [connection string](https://github.com/brianc/node-postgres/wiki/pg#parameters), but you can override this by setting the `DATABASE_URL` environment variable:
+brick-by-brick needs a PostgreSQL database to store geotagged images. Make sure PostgreSQL is installed and is running. By default, the API uses the following [connection string](https://github.com/brianc/node-postgres/wiki/pg#parameters), but you can override this by setting the `DATABASE_URL` environment variable:
 
-    export DATABASE_URL=postgres://postgres:postgres@localhost/surveyor
+    export DATABASE_URL=postgres://postgres:postgres@localhost/brick-by-brick
 
 ### Database initialization
 
 Before starting the API, you need to create the database mentioned in the connection string, and afterwards run the following two SQL files to create the necessary schemas, tables and indexes:
 
-  - Surveyor API tables: [`surveyor-api-tables.sql`](surveyor-api-tables.sql)
+  - brick-by-brick tables: [`sql/tables.sql`](sql/tables.sql)
   - OAuth schema and tables: [`oauth-tables.sql`](https://github.com/nypl-spacetime/express-pg-oauth/blob/master/oauth-tables.sql)
 
 Run the following two commands to initialize your database:
 
-  - `psql surveyor < surveyor-api-tables.sql`
-  - `psql surveyor < node_modules/express-pg-oauth/oauth-tables.sql`
-
-### Digital Collections API token
-
-To fetch image metadata from NYPL's Digital Collections API, Surveyor API needs a valid API key. Sign up for a token on [api.repo.nypl.org](http://api.repo.nypl.org/), and set the `DIGITAL_COLLECTIONS_TOKEN` environment variable to hold this token:
-
-    export DIGITAL_COLLECTIONS_TOKEN=123456789
+  - `psql brick-by-brick < sql/tables.sql`
+  - `psql brick-by-brick < node_modules/express-pg-oauth/oauth-tables.sql`
 
 ### Configuration file
 
-Surveyor API needs a configuration file to run. You can provide the path to this configuration file by either using the `--config` command line option, or by setting the `SURVEYOR_API_CONFIG` environment variable.
+brick-by-brick needs a configuration file to run. You can provide the path to this configuration file by either using the `--config` command line option, or by setting the `BRICK_BY_BRICK_CONFIG` environment variable.
 
 The configuration should have the following format:
 
 ```json
 {
   "server": {
-    "host": "surveyor-api.dev",
+    "host": "brick-by-brick.dev",
     "secret": "secret-for-oauth-signing"
   },
   "database": {
-    "url": "postgres://postgres:postgres@localhost/surveyor",
+    "url": "postgres://postgres:postgres@localhost/brick-by-brick",
   },
   "app": {
     "name": "Application name",
@@ -75,7 +73,7 @@ The configuration should have the following format:
 
 ### Starting the API
 
-To start Surveyor API, run `index.js`:
+To start brick-by-brick, run `index.js`:
 
     node index.js
 
@@ -118,9 +116,7 @@ POST example:
 
 ### Collections
 
-- `GET /collections`: get all collections Surveyor API uses.
-
-The collections are loaded from [`collections.json`](data/collections.json). To exclude a collection in `collections.json`, add `"exclude": true`.
+- `GET /collections`: get all collections brick-by-brick uses.
 
 ### OAuth
 
@@ -134,11 +130,7 @@ The collections are loaded from [`collections.json`](data/collections.json). To 
 
 ### Socket.IO
 
-The Surveryor API provides a [Socket.IO](http://socket.io/) which emits GeoJSON features for each geolocated item.
-
-## Data
-
-See https://github.com/nypl-spacetime/dc-to-surveyor.
+The brick-by-brick provides a [Socket.IO](http://socket.io/) which emits GeoJSON features for each geolocated item.
 
 ## Heroku
 
