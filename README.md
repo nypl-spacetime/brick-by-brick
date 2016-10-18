@@ -1,4 +1,4 @@
-# Space/Time Directory - brick-by-brick
+# <img src="bricks.gif"/> Space/Time Directory - brick-by-brick <img src="bricks.gif"/>
 
 Simple JSON API for small crowdsourcing apps, used in different [NYC Space/Time Directory](http://spacetime.nypl.org/) projects:
 
