@@ -83,40 +83,55 @@ Or, if you want to the API to restart when its code is changed, use [nodemon](ht
 
 The API listens on port 3011 by default, change this by setting the `PORT` environment variable.
 
+## Adding collections and tasks
+
+COMING SOON!
+
 ## API
+
+### Tasks
+
+- `GET /tasks`: get list of available tasks
+- `GET /tasks/:task/items/random`: get random item for which task `:task` has not been completed by the user associated with the current session
 
 ### Items
 
-- `GET /items/:provider/:id`: get a single collection item, with provider `:provider` and ID `:id`
-- `GET /items/random`: get random collection item which has not been geolocated by the user associated with the current session
-- `POST /items/:provider/:id`: send new location of item with provider `:provider` and ID `:id`. POST data should be of the following form:
+- `GET /items/:provider/:id`: get a single item, with provider `:provider` and ID `:id`
+- `POST /items/:provider/:id`: send completed task for item with provider `:provider` and ID `:id`. POST data should be of the following form:
 
-```json
+```js
 {
-  "step": "stepId",
-  "feature": {
-    "type": "Feature",
-    "properties": {
-
-    },
-    "geometry": "geojsonGeometry"
-  }
+  "task": "name_of_task",
+  "data": {
+    // JSON data
+  },
+  "step": "name_of_step", // OPTIONAL
+  "stepIndex": 1 // OPTIONAL
 }
 ```
 
-POST example:
+Or, when the user wants to skip a an item:
 
-    curl -X POST -H 'content-type:application/json' -d '{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[ -79.062595,43.083056]}}' http://localhost:3011/items/5e66b3e8-c8d9-d471-e040-e00a180654d7
+```js
+{
+  "task": "name_of_task",
+  "skipped": true,
+  "step": "name_of_step", // OPTIONAL
+  "stepIndex": 1 // OPTIONAL
+}
+```
 
 ### Submissions
 
-- `GET /submissions`: get all geolocated items for the user associated with the current session
-- `GET /submissions/count`: get the amount of geolocated items for the user associated with the current session
-- `GET /submissions/all`: get the first 1000 geolocated items (pagination will be added in a later version)
+- `GET /tasks/:task/submissions`: get *all* submissions for task `:task` for the user associated with the current session
+- `GET /tasks/:task/submissions/count`: get the amount of submissions for task `:task` for the user associated with the current session
+- `GET /tasks/:task/submissions/all`: get the first 1000 submissions for task `:task` (pagination will be added in a later version)
+- `GET /tasks/:task/submissions/all.ndjson`: get *all* submissions for task `:task`
 
 ### Collections
 
-- `GET /collections`: get all collections brick-by-brick uses.
+- `GET /providers/:provider/collections`: get all collections for provider `:provider`
+- `GET /providers/:provider/collections/:collection`: get single collection with provider `:provider` and collection `:collection`
 
 ### OAuth
 
@@ -126,11 +141,7 @@ POST example:
   - `GET /oauth/connect/github`
   - `GET /oauth/connect/twitter`
   - `GET /oauth/connect/facebook`
-- `GET /oauth`/disconnect: Log out, start new session
-
-### Socket.IO
-
-The brick-by-brick provides a [Socket.IO](http://socket.io/) which emits GeoJSON features for each geolocated item.
+- `GET /oauth/disconnect`: Log out, start new session
 
 ## Heroku
 
