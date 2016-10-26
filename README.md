@@ -93,6 +93,7 @@ COMING SOON!
 
 - `GET /tasks`: get list of available tasks
 - `GET /tasks/:task/items/random`: get random item for which task `:task` has not been completed by the user associated with the current session
+  - `GET /tasks/:task/items/random?collection=a,b,c`: only get items from collections with IDs `a`, `b` or `c`
 
 ### Items
 
