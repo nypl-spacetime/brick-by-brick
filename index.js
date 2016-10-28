@@ -27,8 +27,8 @@ Object.keys(config).forEach((key1) => {
     config[key1][key2] = process.env[envVar(key1, key2)] || userConfig[key1][key2] || config[key1][key2]
 
     if (process.env[envVar(key1, key2)]) {
-      configFound = true  
-    }    
+      configFound = true
+    }
   })
 })
 
@@ -116,13 +116,15 @@ const allItemsQuery = `
   FROM items
   JOIN collections ON (collections.id = items.collection_id)`
 
-const randomItemQuery = `
+const makeRandomItemQuery = (collections) => `
   ${allItemsQuery}
   WHERE (items.provider, items.id) NOT IN (
     SELECT item_provider, item_id
     FROM submissions
     WHERE user_id = $1 AND task = $2
-  ) AND $3 @> tasks AND (
+  ) AND $3 @> tasks AND
+  ${collections ? 'collections.id = ANY ($4)': 'TRUE'} AND
+  (
     collections.submissions_needed = -1
     OR NOT EXISTS (
       SELECT * FROM submission_counts
@@ -143,7 +145,17 @@ const randomItemQuery = `
 // TODO: add ?provider=:provider&collection=:collectionId
 // TODO: see if ORDER BY RANDOM() LIMIT 1 scales
 app.get('/tasks/:task/items/random', (req, res) => {
-  db.executeQuery(randomItemQuery, [req.session.user.id, req.params.task, [req.params.task]], (err, rows) => {
+  var collections
+  if (req.query && req.query.collection) {
+    collections = req.query.collection.split(',')
+  }
+
+  var values = [req.session.user.id, req.params.task, [req.params.task]]
+  if (collections) {
+    values.push(collections)
+  }
+
+  db.executeQuery(makeRandomItemQuery(collections), values, (err, rows) => {
     if (err) {
       send500(res, err)
       return
