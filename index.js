@@ -1,17 +1,17 @@
 'use strict'
 
-var argv = require('minimist')(process.argv.slice(2))
-var H = require('highland')
-var R = require('ramda')
-var express = require('express')
-var cors = require('cors')
-var bodyParser = require('body-parser')
-var brickByBrickPackage = require('./package')
-var app = express()
-var server = require('http').createServer(app)
-var io = require('socket.io')(server)
+const argv = require('minimist')(process.argv.slice(2))
+const H = require('highland')
+const R = require('ramda')
+const express = require('express')
+const cors = require('cors')
+const bodyParser = require('body-parser')
+const pkg = require('./package')
+const app = express()
+const server = require('http').createServer(app)
+// const io = require('socket.io')(server)
 
-var config = require('./base-config.json')
+const config = require('./base-config.json')
 var userConfig = Object.assign({}, config)
 
 var configFound = false
@@ -24,7 +24,9 @@ const envVar = (key1, key2) => `${key1.toUpperCase()}_${key2.toUpperCase()}`
 
 Object.keys(config).forEach((key1) => {
   Object.keys(config[key1]).forEach((key2) => {
-    config[key1][key2] = process.env[envVar(key1, key2)] || userConfig[key1][key2] || config[key1][key2]
+    config[key1][key2] = process.env[envVar(key1, key2)] ||
+      userConfig[key1][key2] ||
+      config[key1][key2]
 
     if (process.env[envVar(key1, key2)]) {
       configFound = true
@@ -33,12 +35,17 @@ Object.keys(config).forEach((key1) => {
 })
 
 if (!configFound) {
-  console.error('No config found, set BRICK_BY_BRICK_API_CONFIG, use --config, or set per-item environment variables')
+  const message = 'No config found, set BRICK_BY_BRICK_API_CONFIG, use --config,' +
+    ' or set per-item environment variables'
+
+  console.error(message)
   process.exit(1)
 }
 
-var oauth = require('express-pg-oauth')
-var db = require('./lib/db')(config.database.url)
+const oauth = require('express-pg-oauth')
+const db = require('./lib/db')(config.database.url)
+const queries = require('./lib/queries')
+const serialize = require('./lib/serialize')
 
 var PORT = process.env.PORT || 3011
 
@@ -60,26 +67,10 @@ function send500 (res, err) {
 
 app.get('/', (req, res) => {
   res.send({
-    title: brickByBrickPackage.description,
-    version: brickByBrickPackage.version
+    title: pkg.description,
+    version: pkg.version
   })
 })
-
-const tasksQuery = `
-  SELECT DISTINCT ON (task) unnest(tasks) AS task
-  FROM collections;`
-
-app.get('/tasks', (req, res) => {
-  db.executeQuery(tasksQuery, [], (err, rows) => {
-    if (err) {
-      send500(res, err)
-      return
-    }
-    res.send(rows.map((row) => row.task))
-  })
-})
-
-const filterNullValues = (obj) => R.pickBy((val, key) => val !== null, obj)
 
 function sendItem (req, res, row) {
   if (!row) {
@@ -88,61 +79,21 @@ function sendItem (req, res, row) {
       message: 'Not found'
     })
   } else {
-    res.send(filterNullValues({
-      provider: row.provider,
-      id: row.item_id,
-      data: row.item_data,
-      collection: filterNullValues({
-        id: row.collection_id,
-        title: row.collection_title,
-        url: row.collection_url,
-        tasks: row.collection_tasks,
-        data: row.collection_data
-      })
-    }))
+    res.send(serialize.item(row))
   }
 }
 
-const allItemsQuery = `
-  SELECT
-    items.provider,
-    items.id AS item_id,
-    items.data AS item_data,
-    collections.id AS collection_id,
-    collections.title AS collection_title,
-    collections.url AS collection_url,
-    collections.tasks AS collection_tasks,
-    collections.data AS collection_data
-  FROM items
-  JOIN collections ON (collections.id = items.collection_id)`
+app.get('/tasks', (req, res) => {
+  db.executeQuery(queries.tasksQuery, [], (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+    res.send(serialize.tasks(rows))
+  })
+})
 
-const makeRandomItemQuery = (collections) => `
-  ${allItemsQuery}
-  WHERE (items.provider, items.id) NOT IN (
-    SELECT item_provider, item_id
-    FROM submissions
-    WHERE user_id = $1 AND task = $2
-  ) AND $3 @> tasks AND
-  ${collections ? 'collections.id = ANY ($4)': 'TRUE'} AND
-  (
-    collections.submissions_needed = -1
-    OR NOT EXISTS (
-      SELECT * FROM submission_counts
-      WHERE
-        item_provider = items.provider AND
-        item_id = items.id AND
-        task = $2
-    ) OR (
-      SELECT count FROM submission_counts
-      WHERE
-        item_provider = items.provider AND
-        item_id = items.id AND
-        task = $2
-    ) < collections.submissions_needed
-  )
-  ORDER BY RANDOM() LIMIT 1;`
-
-// TODO: add ?provider=:provider&collection=:collectionId
+// TODO: add ?provider=:provider
 // TODO: see if ORDER BY RANDOM() LIMIT 1 scales
 app.get('/tasks/:task/items/random', (req, res) => {
   var collections
@@ -150,12 +101,14 @@ app.get('/tasks/:task/items/random', (req, res) => {
     collections = req.query.collection.split(',')
   }
 
-  var values = [req.session.user.id, req.params.task, [req.params.task]]
+  var values = [req.session.user.id, req.params.task]
   if (collections) {
     values.push(collections)
   }
 
-  db.executeQuery(makeRandomItemQuery(collections), values, (err, rows) => {
+  var query = queries.addCollectionsTasksGroupBy(queries.makeRandomItemQuery(collections))
+
+  db.executeQuery(query, values, (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -164,12 +117,10 @@ app.get('/tasks/:task/items/random', (req, res) => {
   })
 })
 
-const itemQuery = `
-  ${allItemsQuery}
-  WHERE items.provider = $1 AND items.id = $2;`
-
 app.get('/items/:provider/:id', (req, res) => {
-  db.executeQuery(itemQuery, [req.params.provider, req.params.id], (err, rows) => {
+  const query = queries.addCollectionsTasksGroupBy(queries.itemQuery)
+
+  db.executeQuery(query, [req.params.provider, req.params.id], (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -200,7 +151,7 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
   var row = {
     item_provider: req.params.provider,
     item_id: req.params.id,
-    task: null,
+    task_id: null,
     user_id: null,
     step: null,
     step_index: null,
@@ -234,7 +185,7 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
     return
   }
 
-  row.task = body.task
+  row.task_id = body.task
 
   const hasData = body.data && R.keys(body.data).length
   if (body.skipped && !hasData) {
@@ -272,24 +223,14 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
   }
   row.client = JSON.stringify(client)
 
-  var columns = R.keys(row)
-  var placeholders = columns.map((column, i) => `$${i + 1}`)
-  var values = placeholders.join(', ')
-  var query = `INSERT INTO submissions (${columns.join(', ')})
-      VALUES (${values})
-    ON CONFLICT (item_provider, item_id, user_id, task, step)
-    WHERE NOT skipped
-    DO UPDATE SET
-      step_index = EXCLUDED.step_index,
-      skipped = EXCLUDED.skipped,
-      date_modified = current_timestamp at time zone 'UTC',
-      data = EXCLUDED.data,
-      client = EXCLUDED.client
-    WHERE NOT EXCLUDED.skipped;`
+  const columns = R.keys(row)
+  const placeholders = columns.map((column, i) => `$${i + 1}`)
+  const values = placeholders.join(', ')
+
+  const query = queries.makeInsertSubmissionQuery(columns, values)
 
   db.executeQuery(query, R.values(row), (err) => {
     if (err) {
-      console.log(err)
       res.status(500).send({
         result: 'error',
         message: err.message
@@ -311,36 +252,19 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
 //   io.emit('feature', feature)
 // }
 
-const submissionRowToJson = (row) => ({
-  collection: {
-    id: row.collection_id
-  },
-  item: {
-    provider: row.item_provider,
-    id: row.item_id,
-    data: row.item_data
-  },
-  task: row.task,
-  step: row.step,
-  skipped: row.skipped ? true : null,
-  data: row.data,
-  dateCreated: row.date_created,
-  dateModified: row.date_modified
-})
-
-const collectionRowToJson = (row) => ({
-  id: row.id,
-  tasks: row.tasks,
-  title: row.title,
-  url: row.url,
-  submissionsNeeded: row.submissions_needed,
-  data: row.data
-})
+// const collectionRowToJson = (row) => ({
+//   provider: row.provider,
+//   id: row.id,
+//   title: row.title,
+//   url: row.url,
+//   data: row.data,
+//   tasks: collectionTaskArraysToJson(row.tasks, row.submissions_needed)
+// })
 
 app.get('/tasks/:task/submissions', (req, res) => {
   const task = req.params.task
   const userId = req.session.user.id
-  var query = db.makeSubmissionsQuery(task, userId)
+  var query = queries.makeSubmissionsQuery(task, userId)
 
   db.executeQuery(query, [task, req.session.user.id], (err, rows) => {
     if (err) {
@@ -349,14 +273,14 @@ app.get('/tasks/:task/submissions', (req, res) => {
         message: err.message
       })
     } else {
-      res.send(rows.map(submissionRowToJson).map(filterNullValues))
+      res.send(serialize.submissions(rows))
     }
   })
 })
 
 app.get('/tasks/:task/submissions/all', (req, res) => {
   const task = req.params.task
-  var query = db.makeSubmissionsQuery(task, null, 1000)
+  var query = queries.makeSubmissionsQuery(task, null, 1000)
   db.executeQuery(query, [task], (err, rows) => {
     if (err) {
       res.status(500).send({
@@ -364,16 +288,16 @@ app.get('/tasks/:task/submissions/all', (req, res) => {
         message: err.message
       })
     } else {
-      res.send(rows.map(submissionRowToJson).map(filterNullValues))
+      res.send(serialize.submissions(rows))
     }
   })
 })
 
 app.get('/tasks/:task/submissions/all.ndjson', (req, res) => {
   const task = req.params.task
-  var query = db.makeSubmissionsQuery(task)
+  var query = queries.makeSubmissionsQuery(task)
 
-  var stream = db.streamQuery(query, [task], (err, stream) => {
+  db.streamQuery(query, [task], (err, stream) => {
     if (err) {
       send500(res, err)
       return
@@ -381,8 +305,7 @@ app.get('/tasks/:task/submissions/all.ndjson', (req, res) => {
 
     // res.type('application/x-ndjson')
     H(stream)
-      .map(submissionRowToJson)
-      .map(filterNullValues)
+      .map(serialize.submission)
       .map(JSON.stringify)
       .intersperse('\n')
       .pipe(res)
@@ -392,11 +315,7 @@ app.get('/tasks/:task/submissions/all.ndjson', (req, res) => {
 app.get('/tasks/:task/submissions/count', (req, res) => {
   const task = req.params.task
   const userId = req.session.user.id
-  var query = `
-    SELECT COUNT(*)::int AS count
-    FROM (
-      ${db.makeSubmissionsQuery(task, userId)}
-    ) s;`
+  const query = queries.makeSubmissionsCountQuery(task, userId)
 
   db.executeQuery(query, [task, userId], (err, rows) => {
     if (err) {
@@ -411,29 +330,20 @@ app.get('/tasks/:task/submissions/count', (req, res) => {
   })
 })
 
-var collectionsQuery = `
-  SELECT *
-  FROM collections
-  WHERE provider = $1;`
-
 app.get('/providers/:providerId/collections', (req, res) => {
-  db.executeQuery(collectionsQuery, [req.params.providerId], (err, rows) => {
+  db.executeQuery(queries.collectionsQuery, [req.params.providerId], (err, rows) => {
     if (err) {
       send500(res, err)
       return
     }
 
-    res.send(rows.map(collectionRowToJson).map(filterNullValues))
+    res.send(serialize.collections(rows))
   })
 })
 
-var collectionQuery = `
-  SELECT *
-  FROM collections
-  WHERE provider = $1 AND id = $2;`
-
 app.get('/providers/:providerId/collections/:collectionId', (req, res) => {
-  db.executeQuery(collectionQuery, [req.params.providerId, req.params.colletionId], (err, rows) => {
+  const params = [req.params.providerId, req.params.colletionId]
+  db.executeQuery(queries.collectionQuery, params, (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -449,10 +359,10 @@ app.get('/providers/:providerId/collections/:collectionId', (req, res) => {
       return
     }
 
-    res.send(filterNullValues(collectionRowToJson(collection)))
+    res.send(serialize.collection(collection))
   })
 })
 
 server.listen(PORT, () => {
-  console.log(`${brickByBrickPackage.name} API listening on PORT ${PORT}!`)
+  console.log(`${pkg.name} API listening on PORT ${PORT}!`)
 })

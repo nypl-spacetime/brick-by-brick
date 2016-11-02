@@ -5,6 +5,7 @@ Simple JSON API for small crowdsourcing apps, used in different [NYC Space/Time 
 - https://github.com/nypl-spacetime/surveyor
 - https://github.com/nypl-spacetime/label-fields
 - https://github.com/nypl-spacetime/tagmap
+- https://github.com/nypl-spacetime/select-landmark
 
 ## Installation & usage
 
