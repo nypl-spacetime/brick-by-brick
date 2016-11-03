@@ -98,12 +98,12 @@ COMING SOON!
 
 ### Items
 
-- `GET /items/:provider/:id`: get a single item, with provider `:provider` and ID `:id`
-- `POST /items/:provider/:id`: send completed task for item with provider `:provider` and ID `:id`. POST data should be of the following form:
+- `GET /items/:organizationId/:id`: get a single item, with organization `:organizationId` and ID `:id`
+- `POST /items/:organizationId/:id`: send completed task for item with organization `:organizationId` and ID `:id`. POST data should be of the following form:
 
 ```js
 {
-  "task": "name_of_task",
+  "taskId": "task ID",
   "data": {
     // JSON data
   },
@@ -116,7 +116,7 @@ Or, when the user wants to skip a an item:
 
 ```js
 {
-  "task": "name_of_task",
+  "taskId": "task ID",
   "skipped": true,
   "step": "name_of_step", // OPTIONAL
   "stepIndex": 1 // OPTIONAL
@@ -125,15 +125,15 @@ Or, when the user wants to skip a an item:
 
 ### Submissions
 
-- `GET /tasks/:task/submissions`: get *all* submissions for task `:task` for the user associated with the current session
-- `GET /tasks/:task/submissions/count`: get the amount of submissions for task `:task` for the user associated with the current session
-- `GET /tasks/:task/submissions/all`: get the first 1000 submissions for task `:task` (pagination will be added in a later version)
-- `GET /tasks/:task/submissions/all.ndjson`: get *all* submissions for task `:task`
+- `GET /tasks/:taskId/submissions`: get *all* submissions for task `:taskId` for the user associated with the current session
+- `GET /tasks/:taskId/submissions/count`: get the amount of submissions for task `:taskId` for the user associated with the current session
+- `GET /tasks/:taskId/submissions/all`: get the first 1000 submissions for task `:taskId` (pagination will be added in a later version)
+- `GET /tasks/:taskId/submissions/all.ndjson`: get *all* submissions for task `:taskId`
 
 ### Collections
 
-- `GET /providers/:provider/collections`: get all collections for provider `:provider`
-- `GET /providers/:provider/collections/:collection`: get single collection with provider `:provider` and collection `:collection`
+- `GET /organizations/:organizationId/collections`: get all collections for organization `:organizationId`
+- `GET /organizations/:organizationId/collections/:collection`: get single collection with organization `:organizationId` and collection `:collection`
 
 ### OAuth
 

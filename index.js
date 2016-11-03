@@ -93,7 +93,7 @@ app.get('/tasks', (req, res) => {
   })
 })
 
-// TODO: add ?provider=:provider
+// TODO: add ?organization=:organizationId
 // TODO: see if ORDER BY RANDOM() LIMIT 1 scales
 app.get('/tasks/:task/items/random', (req, res) => {
   var collections
@@ -117,10 +117,10 @@ app.get('/tasks/:task/items/random', (req, res) => {
   })
 })
 
-app.get('/items/:provider/:id', (req, res) => {
+app.get('/items/:organizationId/:id', (req, res) => {
   const query = queries.addCollectionsTasksGroupBy(queries.itemQuery)
 
-  db.executeQuery(query, [req.params.provider, req.params.id], (err, rows) => {
+  db.executeQuery(query, [req.params.organizationId, req.params.id], (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -130,7 +130,7 @@ app.get('/items/:provider/:id', (req, res) => {
 })
 
 function itemExists (req, res, next) {
-  db.itemExists(req.params.provider, req.params.id, (err, exists) => {
+  db.itemExists(req.params.organizationId, req.params.id, (err, exists) => {
     if (err) {
       send500(res, err)
       return
@@ -147,9 +147,9 @@ function itemExists (req, res, next) {
   })
 }
 
-app.post('/items/:provider/:id', itemExists, (req, res) => {
+app.post('/items/:organizationId/:id', itemExists, (req, res) => {
   var row = {
-    item_provider: req.params.provider,
+    organization_id: req.params.organizationId,
     item_id: req.params.id,
     task_id: null,
     user_id: null,
@@ -161,7 +161,7 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
   }
 
   // POST data should contain:
-  //     - task
+  //     - taskId
   //     - step
   //     - stepIndex
   //   if skipped == true,
@@ -177,15 +177,15 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
 
   var body = req.body
 
-  if (!body.task || !body.task.length) {
+  if (!body.taskId || !body.taskId.length) {
     res.status(406).send({
       result: 'error',
-      message: 'No task specified'
+      message: 'No taskId specified'
     })
     return
   }
 
-  row.task_id = body.task
+  row.task_id = body.taskId
 
   const hasData = body.data && R.keys(body.data).length
   if (body.skipped && !hasData) {
@@ -251,15 +251,6 @@ app.post('/items/:provider/:id', itemExists, (req, res) => {
 //   var feature = locationToFeature(row)
 //   io.emit('feature', feature)
 // }
-
-// const collectionRowToJson = (row) => ({
-//   provider: row.provider,
-//   id: row.id,
-//   title: row.title,
-//   url: row.url,
-//   data: row.data,
-//   tasks: collectionTaskArraysToJson(row.tasks, row.submissions_needed)
-// })
 
 app.get('/tasks/:task/submissions', (req, res) => {
   const task = req.params.task
@@ -330,8 +321,8 @@ app.get('/tasks/:task/submissions/count', (req, res) => {
   })
 })
 
-app.get('/providers/:providerId/collections', (req, res) => {
-  db.executeQuery(queries.collectionsQuery, [req.params.providerId], (err, rows) => {
+app.get('/organizations/:organizationId/collections', (req, res) => {
+  db.executeQuery(queries.collectionsQuery, [req.params.organizationId], (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -341,8 +332,8 @@ app.get('/providers/:providerId/collections', (req, res) => {
   })
 })
 
-app.get('/providers/:providerId/collections/:collectionId', (req, res) => {
-  const params = [req.params.providerId, req.params.colletionId]
+app.get('/organizations/:organizationId/collections/:collectionId', (req, res) => {
+  const params = [req.params.organizationId, req.params.colletionId]
   db.executeQuery(queries.collectionQuery, params, (err, rows) => {
     if (err) {
       send500(res, err)
