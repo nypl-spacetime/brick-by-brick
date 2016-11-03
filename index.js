@@ -101,14 +101,14 @@ app.get('/tasks/:task/items/random', (req, res) => {
     collections = req.query.collection.split(',')
   }
 
-  var values = [req.session.user.id, req.params.task]
+  var params = [req.session.user.id, req.params.task]
   if (collections) {
-    values.push(collections)
+    params.push(collections)
   }
 
   var query = queries.addCollectionsTasksGroupBy(queries.makeRandomItemQuery(collections))
 
-  db.executeQuery(query, values, (err, rows) => {
+  db.executeQuery(query, params, (err, rows) => {
     if (err) {
       send500(res, err)
       return
