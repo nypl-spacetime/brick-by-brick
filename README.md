@@ -93,13 +93,13 @@ COMING SOON!
 ### Tasks
 
 - `GET /tasks`: get list of available tasks
-- `GET /tasks/:task/items/random`: get random item for which task `:task` has not been completed by the user associated with the current session
-  - `GET /tasks/:task/items/random?collection=a,b,c`: only get items from collections with IDs `a`, `b` or `c`
+- `GET /tasks/:taskId/items/random`: get random item for which task `:taskId` has not been completed by the user associated with the current session
+  - `GET /tasks/:taskId/items/random?collection=a,b,c`: only get items from collections with IDs `a`, `b` or `c`
 
 ### Items
 
-- `GET /items/:organizationId/:id`: get a single item, with organization `:organizationId` and ID `:id`
-- `POST /items/:organizationId/:id`: send completed task for item with organization `:organizationId` and ID `:id`. POST data should be of the following form:
+- `GET /items/:organizationId/:id`: get a single item, with organization `:organizationId` and item ID `:id`
+- `POST /items/:organizationId/:id`: send completed task for item with organization `:organizationId` and item ID `:id`. POST data should be of the following form:
 
 ```js
 {
