@@ -121,7 +121,7 @@ app.get('/collections', (req, res) => {
 })
 
 app.get('/collections/authorized', (req, res) => {
-  const email = getUserEmail (req)
+  const email = getUserEmail(req)
   db.executeQuery(queries.authorizedCollectionsQuery, [email], (err, rows) => {
     if (err) {
       send500(res, err)
@@ -150,19 +150,20 @@ app.get('/tasks/:taskId/collections', (req, res) => {
       send500(res, err)
       return
     }
-    res.send(serialize.tasks(rows))
+    res.send(serialize.collections(rows))
   })
 })
 
 app.get('/tasks/:taskId/collections/authorized', (req, res) => {
-  const params = [req.session.user.id, req.params.taskId]
+  const email = getUserEmail(req)
+  const params = [email, req.params.taskId]
   const query = queries.makeCollectionsWithTaskQuery(queries.authorizedCollectionsQuery, params)
   db.executeQuery(query, params, (err, rows) => {
     if (err) {
       send500(res, err)
       return
     }
-    res.send(serialize.tasks(rows))
+    res.send(serialize.collections(rows))
   })
 })
 
