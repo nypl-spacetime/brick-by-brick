@@ -158,6 +158,8 @@ Or, when the user wants to skip a an item:
 - `GET /collections/authorized`: get all collections for which the user associated with the current session has authorization
 - `GET /organizations/:organizationId/collections`: get all collections for organization `:organizationId`
 - `GET /organizations/:organizationId/collections/:collectionId`: get single collection with organization `:organizationId` and collection `:collectionId`
+- `GET /tasks/:taskId/collections`: get all collections that require task `:taskId`
+- `GET /tasks/:taskId/collections/authorized`: get all collections that require task `:taskId` for which the user associated with the current session has authorization
 
 ### OAuth
 

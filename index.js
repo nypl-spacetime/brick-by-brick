@@ -142,9 +142,33 @@ app.get('/tasks', (req, res) => {
   })
 })
 
+app.get('/tasks/:taskId/collections', (req, res) => {
+  const params = [req.params.taskId]
+  const query = queries.makeCollectionsWithTaskQuery(queries.collectionsQuery, params)
+  db.executeQuery(query, params, (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+    res.send(serialize.tasks(rows))
+  })
+})
+
+app.get('/tasks/:taskId/collections/authorized', (req, res) => {
+  const params = [req.session.user.id, req.params.taskId]
+  const query = queries.makeCollectionsWithTaskQuery(queries.authorizedCollectionsQuery, params)
+  db.executeQuery(query, params, (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+    res.send(serialize.tasks(rows))
+  })
+})
+
 // TODO: see if ORDER BY RANDOM() LIMIT 1 scales
-app.get('/tasks/:task/items/random', (req, res) => {
-  var params = [req.session.user.id, req.params.task]
+app.get('/tasks/:taskId/items/random', (req, res) => {
+  var params = [req.session.user.id, req.params.taskId]
 
   var organizations
   if (req.query && req.query.organization) {
