@@ -1,10 +1,18 @@
+CREATE TABLE organizations (
+  id text NOT NULL,
+  title text,
+  user_email_filter_regex text,
+  CONSTRAINT organizations_pkey PRIMARY KEY (id)
+);
+
 CREATE TABLE collections (
   organization_id text NOT NULL,
   id text NOT NULL,
   title text,
   url text,
   data jsonb,
-  CONSTRAINT collections_pkey PRIMARY KEY (organization_id, id)
+  CONSTRAINT collections_pkey PRIMARY KEY (organization_id, id),
+  FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE RESTRICT
 );
 
 CREATE TABLE tasks (
@@ -27,8 +35,8 @@ CREATE TABLE items (
   id text NOT NULL,
   collection_id text NOT NULL,
   data jsonb NOT NULL,
-  FOREIGN KEY (organization_id, collection_id) REFERENCES collections (organization_id, id) ON DELETE CASCADE,
-  CONSTRAINT items_pkey PRIMARY KEY (organization_id, id)
+  CONSTRAINT items_pkey PRIMARY KEY (organization_id, id),
+  FOREIGN KEY (organization_id, collection_id) REFERENCES collections (organization_id, id) ON DELETE CASCADE
 );
 
 CREATE TABLE submissions (

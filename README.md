@@ -93,17 +93,28 @@ COMING SOON!
 ### Tasks
 
 - `GET /tasks`: get list of available tasks
-- `GET /tasks/:taskId/items/random`: get random item for which task `:taskId` has not been completed by the user associated with the current session
-  - `GET /tasks/:taskId/items/random?collection=a,b,c`: only get items from collections with IDs `a`, `b` or `c`
 
 ### Items
 
-- `GET /items/:organizationId/:id`: get a single item, with organization `:organizationId` and item ID `:id`
-- `POST /items/:organizationId/:id`: send completed task for item with organization `:organizationId` and item ID `:id`. POST data should be of the following form:
+- `GET /tasks/:taskId/items/random`: get random item for which task `:taskId` has not been completed by the user associated with the current session
+  - `GET /tasks/:taskId/items/random?collection=a,b,c`: only get items from collections with IDs `a`, `b` or `c`
+- `GET /organization/:organizationId/items/:itemId`: get a single item, with organization `:organizationId` and item ID `:itemId`
+
+### Submissions
+
+- `POST /submissions`: send completed task for an item. POST data should be of the following form:
 
 ```js
 {
-  "taskId": "task ID",
+  "item": {
+    "id": "itemId"
+  },
+  organization: {
+    "id": "organizationId"
+  },
+  "task": {
+    "id": "taskID"
+  },
   "data": {
     // JSON data
   },
@@ -116,33 +127,46 @@ Or, when the user wants to skip a an item:
 
 ```js
 {
-  "taskId": "task ID",
+  "item": {
+    "id": "itemId"
+  },
+  organization: {
+    "id": "organizationId"
+  },
+  "task": {
+    "id": "taskID"
+  },
   "skipped": true,
   "step": "name_of_step", // OPTIONAL
   "stepIndex": 1 // OPTIONAL
 }
 ```
 
-### Submissions
-
 - `GET /tasks/:taskId/submissions`: get *all* submissions for task `:taskId` for the user associated with the current session
 - `GET /tasks/:taskId/submissions/count`: get the amount of submissions for task `:taskId` for the user associated with the current session
 - `GET /tasks/:taskId/submissions/all`: get the first 1000 submissions for task `:taskId` (pagination will be added in a later version)
 - `GET /tasks/:taskId/submissions/all.ndjson`: get *all* submissions for task `:taskId`
 
+### Organizations
+
+- `GET /organizations`: get all organizations
+- `GET /organizations/authorized`: get all organizations for which the user associated with the current session has authorization
+
 ### Collections
 
+- `GET /collections`: get all collections
+- `GET /collections/authorized`: get all collections for which the user associated with the current session has authorization
 - `GET /organizations/:organizationId/collections`: get all collections for organization `:organizationId`
-- `GET /organizations/:organizationId/collections/:collection`: get single collection with organization `:organizationId` and collection `:collection`
+- `GET /organizations/:organizationId/collections/:collectionId`: get single collection with organization `:organizationId` and collection `:collectionId`
 
 ### OAuth
 
 - `GET /oauth`: get user information, and list of available OAuth providers
 - Log in with different OAuth providers:
-  - `GET /oauth/connect/google`
-  - `GET /oauth/connect/github`
-  - `GET /oauth/connect/twitter`
-  - `GET /oauth/connect/facebook`
+  - `GET /oauth/authenticate/google`
+  - `GET /oauth/authenticate/github`
+  - `GET /oauth/authenticate/twitter`
+  - `GET /oauth/authenticate/facebook`
 - `GET /oauth/disconnect`: Log out, start new session
 
 ## Heroku
