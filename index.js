@@ -66,7 +66,6 @@ function send500 (res, err) {
 }
 
 function getUserEmail (req) {
-  return 'bertspaan@nypl.org'
   return req && req.session && req.session.oauth &&
     req.session.oauth.data && req.session.oauth.data.email || ''
 }
