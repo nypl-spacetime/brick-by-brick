@@ -99,7 +99,7 @@ app.get('/organizations', (req, res) => {
 })
 
 app.get('/organizations/authorized', (req, res) => {
-  const email = getUserEmail (req)
+  const email = getUserEmail(req)
   db.executeQuery(queries.authorizedOrganizationsQuery, [email], (err, rows) => {
     if (err) {
       send500(res, err)
@@ -168,7 +168,7 @@ app.get('/tasks/:taskId/collections/authorized', (req, res) => {
 })
 
 // TODO: see if ORDER BY RANDOM() LIMIT 1 scales
-app.get('/tasks/:taskId/items/random', (req, res) => {
+app.get('/tasks/:taskId/items/random', userAuthorizedForOrganizationsOrCollections, (req, res) => {
   var params = [req.session.user.id, req.params.taskId]
 
   var organizations
@@ -200,7 +200,7 @@ app.get('/tasks/:taskId/items/random', (req, res) => {
   })
 })
 
-app.get('/organizations/:organizationId/items/:itemId', userAuthorizedForOrganization, (req, res) => {
+app.get('/organizations/:organizationId/items/:itemId', userAuthorizedForOrganizationsOrCollections, (req, res) => {
   const query = queries.addCollectionsTasksGroupBy(queries.itemQuery)
 
   db.executeQuery(query, [req.params.organizationId, req.params.itemId], (err, rows) => {
@@ -212,12 +212,37 @@ app.get('/organizations/:organizationId/items/:itemId', userAuthorizedForOrganiz
   })
 })
 
-function userAuthorizedForOrganization (req, res, next) {
-  const email = getUserEmail(req)
+function userAuthorizedForOrganizationsOrCollections (req, res, next) {
+  var organizationIds
   const organizationId = req.params.organizationId ||
     (req.body && req.body.organization && req.body.organization.id)
+  if (organizationId) {
+    organizationIds = [organizationId]
+  } else if (req.query && req.query.organization) {
+    organizationIds = req.query.organization.split(',')
+  }
 
-  db.executeQuery(queries.authorizedOrganizationQuery, [organizationId, email], (err, rows) => {
+  var collectionIds
+  const collectionId = req.params.collectionId ||
+    (req.body && req.body.collection && req.body.collection.id)
+  if (collectionId) {
+    collectionIds = [collectionId]
+  } else if (req.query && req.query.collection) {
+    collectionIds = req.query.collection.split(',')
+  }
+
+  if (!organizationIds && !collectionIds) {
+    next()
+    return
+  }
+
+  const email = getUserEmail(req)
+  const params = [email, organizationIds, collectionIds]
+    .filter((param) => param !== undefined)
+
+  const query = queries.makeAuthorizedCollectionsQuery.apply(this, params)
+
+  db.executeQuery(query, params, (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -258,7 +283,7 @@ function itemExists (req, res, next) {
   })
 }
 
-app.post('/submissions', userAuthorizedForOrganization, itemExists, (req, res) => {
+app.post('/submissions', userAuthorizedForOrganizationsOrCollections, itemExists, (req, res) => {
   var row = {
     organization_id: null,
     item_id: null,
