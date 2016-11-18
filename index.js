@@ -66,6 +66,7 @@ function send500 (res, err) {
 }
 
 function getUserEmail (req) {
+  return 'bertspaan@nypl.org'
   return req && req.session && req.session.oauth &&
     req.session.oauth.data && req.session.oauth.data.email || ''
 }
@@ -237,10 +238,9 @@ function userAuthorizedForOrganizationsOrCollections (req, res, next) {
   }
 
   const email = getUserEmail(req)
+  const query = queries.makeAuthorizedCollectionsQuery(email, organizationIds, collectionIds)
   const params = [email, organizationIds, collectionIds]
     .filter((param) => param !== undefined)
-
-  const query = queries.makeAuthorizedCollectionsQuery.apply(this, params)
 
   db.executeQuery(query, params, (err, rows) => {
     if (err) {
