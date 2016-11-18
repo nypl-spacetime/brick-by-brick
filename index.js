@@ -237,7 +237,7 @@ function userAuthorizedForOrganizationsOrCollections (req, res, next) {
   }
 
   const email = getUserEmail(req)
-  const query = queries.makeAuthorizedCollectionsQuery(email, organizationIds, collectionIds)
+  const query = queries.makeAuthorizedCollectionsQuery(organizationIds, collectionIds)
   const params = [email, organizationIds, collectionIds]
     .filter((param) => param !== undefined)
 
