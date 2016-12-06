@@ -86,7 +86,7 @@ The API listens on port 3011 by default, change this by setting the `PORT` envir
 
 ## Adding collections and tasks
 
-COMING SOON!
+Currently only possible via direct access to PostgreSQL database, via https://github.com/nypl-spacetime/to-brick.
 
 ## API
 
@@ -96,9 +96,13 @@ COMING SOON!
 
 ### Items
 
-- `GET /tasks/:taskId/items/random`: get random item for which task `:taskId` has not been completed by the user associated with the current session
-  - `GET /tasks/:taskId/items/random?collection=a,b,c`: only get items from collections with IDs `a`, `b` or `c`
+- `GET /tasks/:taskId/items`: get (at most) 50 items for task `:taskId`, __both completed and uncompleted__ by the user associated with the current session
+  - `GET /tasks/:taskId/items?organization=a,b&collection=1,2,3`: only get items from organizations with IDs `a` or `b`, and collections with IDs `1`, `2` or `3`
+- `GET /tasks/:taskId/items/random`: get random item for which task `:taskId` __has not been completed__ by the user associated with the current session
+  - `GET /tasks/:taskId/items/random?organization=a,b&collection=1,2,3`: only get items from organizations with IDs `a` or `b`, and collections with IDs `1`, `2` or `3`
 - `GET /organization/:organizationId/items/:itemId`: get a single item, with organization `:organizationId` and item ID `:itemId`
+
+If returned items have submissions by the user associated with the current session, submission data will be included per returned item.
 
 ### Submissions
 

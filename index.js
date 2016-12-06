@@ -65,6 +65,14 @@ function send500 (res, err) {
   })
 }
 
+function getParamValues (params) {
+  return R.values(params)
+}
+
+function getParamIndexes (params) {
+  return R.fromPairs(R.keys(params).map((key, i) => [key, i + 1]))
+}
+
 function getUserEmail (req) {
   return req && req.session && req.session.oauth &&
     req.session.oauth.data && req.session.oauth.data.email || ''
@@ -167,31 +175,82 @@ app.get('/tasks/:taskId/collections/authorized', (req, res) => {
   })
 })
 
-// TODO: see if ORDER BY RANDOM() LIMIT 1 scales
-app.get('/tasks/:taskId/items/random', userAuthorizedForOrganizationsOrCollections, (req, res) => {
-  var params = [req.session.user.id, req.params.taskId]
+app.get('/tasks/:taskId/items', userAuthorizedForOrganizationsOrCollections, (req, res) => {
+  const taskId = req.params.taskId
+  const userId = req.session.user.id
+
+  var params = {taskId, userId, limit: 50}
+
+  const email = getUserEmail(req)
+  if (email) {
+    params = Object.assign(params, {email})
+  }
 
   var organizations
   if (req.query && req.query.organization) {
     organizations = req.query.organization.split(',')
-    params.push(organizations)
+    params = Object.assign(params, {organizations})
+  }
+
+  var collections
+  var collectionsParamIndex
+  if (req.query && req.query.collection) {
+    collections = req.query.collection.split(',')
+    params = Object.assign(params, {collections})
+  }
+
+  const paramValues = getParamValues(params)
+  const paramIndexes = getParamIndexes(params)
+
+  var query = queries.makeAllItemsForTaskQuery (paramIndexes)
+  query = queries.addCollectionsTasksGroupBy(query, paramIndexes)
+  query = queries.addSubmissionForUser(query, paramIndexes)
+  query = queries.addLimitAndOffset(query, paramIndexes)
+
+  db.executeQuery(query, paramValues, (err, rows) => {
+    if (err) {
+      send500(res, err)
+      return
+    }
+
+    res.send(serialize.items(rows))
+  })
+})
+
+// TODO: see if ORDER BY RANDOM() LIMIT 1 scales
+app.get('/tasks/:taskId/items/random', userAuthorizedForOrganizationsOrCollections, (req, res) => {
+  const userId = req.session.user.id
+  const taskId = req.params.taskId
+
+  var params = {
+    userId,
+    taskId
+  }
+
+  const email = getUserEmail(req)
+  if (email) {
+    params = Object.assign(params, {email})
+  }
+
+  var organizations
+  if (req.query && req.query.organization) {
+    organizations = req.query.organization.split(',')
+    params = Object.assign(params, {organizations})
   }
 
   var collections
   if (req.query && req.query.collection) {
     collections = req.query.collection.split(',')
-    params.push(collections)
+    params = Object.assign(params, {collections})
   }
 
-  const email = getUserEmail(req)
-  if (email) {
-    params.push(email)
-  }
+  const paramValues = getParamValues(params)
+  const paramIndexes = getParamIndexes(params)
 
-  var query = queries.makeRandomItemQuery(organizations, collections, email)
+  var query = queries.makeRandomItemQuery(paramIndexes)
   query = queries.addCollectionsTasksGroupBy(query)
 
-  db.executeQuery(query, params, (err, rows) => {
+  db.executeQuery(query, paramValues, (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -201,9 +260,20 @@ app.get('/tasks/:taskId/items/random', userAuthorizedForOrganizationsOrCollectio
 })
 
 app.get('/organizations/:organizationId/items/:itemId', userAuthorizedForOrganizationsOrCollections, (req, res) => {
-  const query = queries.addCollectionsTasksGroupBy(queries.itemQuery)
+  const userId = req.session.user.id
+  var params = {
+    organizationId: req.params.organizationId,
+    itemId: req.params.itemId,
+    userId
+  }
 
-  db.executeQuery(query, [req.params.organizationId, req.params.itemId], (err, rows) => {
+  const paramValues = getParamValues(params)
+  const paramIndexes = getParamIndexes(params)
+
+  var query = queries.addCollectionsTasksGroupBy(queries.itemQuery)
+  query = queries.addSubmissionForUser(query, paramIndexes)
+
+  db.executeQuery(query, paramValues, (err, rows) => {
     if (err) {
       send500(res, err)
       return
@@ -238,6 +308,7 @@ function userAuthorizedForOrganizationsOrCollections (req, res, next) {
 
   const email = getUserEmail(req)
   const query = queries.makeAuthorizedCollectionsQuery(organizationIds, collectionIds)
+
   const params = [email, organizationIds, collectionIds]
     .filter((param) => param !== undefined)
 
@@ -411,12 +482,12 @@ app.post('/submissions', userAuthorizedForOrganizationsOrCollections, itemExists
 //   io.emit('feature', feature)
 // }
 
-app.get('/tasks/:task/submissions', (req, res) => {
-  const task = req.params.task
+app.get('/tasks/:taskId/submissions', (req, res) => {
+  const taskId = req.params.taskId
   const userId = req.session.user.id
-  var query = queries.makeSubmissionsQuery(task, userId)
+  var query = queries.makeSubmissionsQuery(userId)
 
-  db.executeQuery(query, [task, req.session.user.id], (err, rows) => {
+  db.executeQuery(query, [taskId, req.session.user.id], (err, rows) => {
     if (err) {
       res.status(500).send({
         result: 'error',
@@ -428,10 +499,10 @@ app.get('/tasks/:task/submissions', (req, res) => {
   })
 })
 
-app.get('/tasks/:task/submissions/all', (req, res) => {
-  const task = req.params.task
-  var query = queries.makeSubmissionsQuery(task, null, 1000)
-  db.executeQuery(query, [task], (err, rows) => {
+app.get('/tasks/:taskId/submissions/all', (req, res) => {
+  const taskId = req.params.taskId
+  var query = queries.makeSubmissionsQuery(null, 1000)
+  db.executeQuery(query, [taskId], (err, rows) => {
     if (err) {
       res.status(500).send({
         result: 'error',
@@ -443,11 +514,11 @@ app.get('/tasks/:task/submissions/all', (req, res) => {
   })
 })
 
-app.get('/tasks/:task/submissions/all.ndjson', (req, res) => {
-  const task = req.params.task
-  var query = queries.makeSubmissionsQuery(task)
+app.get('/tasks/:taskId/submissions/all.ndjson', (req, res) => {
+  const taskId = req.params.taskId
+  var query = queries.makeSubmissionsQuery()
 
-  db.streamQuery(query, [task], (err, stream) => {
+  db.streamQuery(query, [taskId], (err, stream) => {
     if (err) {
       send500(res, err)
       return
@@ -463,11 +534,11 @@ app.get('/tasks/:task/submissions/all.ndjson', (req, res) => {
 })
 
 app.get('/tasks/:task/submissions/count', (req, res) => {
-  const task = req.params.task
+  const taskId = req.params.taskId
   const userId = req.session.user.id
-  const query = queries.makeSubmissionsCountQuery(task, userId)
+  const query = queries.makeSubmissionsCountQuery(userId)
 
-  db.executeQuery(query, [task, userId], (err, rows) => {
+  db.executeQuery(query, [taskId, userId], (err, rows) => {
     if (err) {
       send500(res, err)
       return
