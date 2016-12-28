@@ -533,7 +533,7 @@ app.get('/tasks/:taskId/submissions/all.ndjson', (req, res) => {
   })
 })
 
-app.get('/tasks/:task/submissions/count', (req, res) => {
+app.get('/tasks/:taskId/submissions/count', (req, res) => {
   const taskId = req.params.taskId
   const userId = req.session.user.id
   const query = queries.makeSubmissionsCountQuery(userId)
