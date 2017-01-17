@@ -7,7 +7,7 @@ Simple JSON API for small crowdsourcing apps, used in different [NYC Space/Time 
 - https://github.com/nypl-spacetime/tagmap
 - https://github.com/nypl-spacetime/select-landmark
 - https://github.com/nypl-spacetime/trace-maps
-- https://github.com/nypl-spacetime/fix-orc
+- https://github.com/nypl-spacetime/fix-ocr
 
 ## Installation & usage
 
