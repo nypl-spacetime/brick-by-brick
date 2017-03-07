@@ -193,7 +193,6 @@ app.get('/tasks/:taskId/items', userAuthorizedForOrganizationsOrCollections, (re
   }
 
   var collections
-  var collectionsParamIndex
   if (req.query && req.query.collection) {
     collections = req.query.collection.split(',')
     params = Object.assign(params, {collections})
@@ -202,7 +201,7 @@ app.get('/tasks/:taskId/items', userAuthorizedForOrganizationsOrCollections, (re
   const paramValues = getParamValues(params)
   const paramIndexes = getParamIndexes(params)
 
-  var query = queries.makeAllItemsForTaskQuery (paramIndexes)
+  var query = queries.makeAllItemsForTaskQuery(paramIndexes)
   query = queries.addCollectionsTasksGroupBy(query, paramIndexes)
   query = queries.addSubmissionForUser(query, paramIndexes)
   query = queries.addLimitAndOffset(query, paramIndexes)
