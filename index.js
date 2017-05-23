@@ -54,7 +54,9 @@ app.use(cors({
   credentials: true
 }))
 
-app.use(bodyParser.json())
+app.use(bodyParser.json({
+  limit: '2mb'
+}))
 
 app.use(oauth(config, db.updateUserIds))
 
@@ -584,5 +586,5 @@ app.get('/organizations/:organizationId/collections/:collectionId', (req, res) =
 })
 
 server.listen(PORT, () => {
-  console.log(`${pkg.name} API listening on PORT ${PORT}!`)
+  console.log(`${pkg.name} API listening on port ${PORT}!`)
 })
