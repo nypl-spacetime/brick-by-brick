@@ -74,6 +74,8 @@ The configuration should have the following format:
 }
 ```
 
+To enable authentition via OAuth 2.0, you need to supply one or more OAuth app keys and secrets. For more information and links to the websites where you can register your OAuth apps, see https://github.com/nypl-spacetime/express-pg-oauth#oauth-providers.
+
 ### Starting the API
 
 To start brick-by-brick, run `index.js`:
