@@ -59,7 +59,7 @@ CREATE TABLE submissions (
 );
 
 CREATE INDEX submissions_skipped_user_id ON submissions (skipped, user_id);
-CREATE INDEX submissions_user_id_organization_id_step_index ON submissions (user_id, organization_id, item_id, step_index);
+CREATE INDEX submissions_user_id_organization_id_item_id_skipped ON submissions (user_id, organization_id, item_id, skipped);
 
 CREATE TABLE submission_counts (
   organization_id text NOT NULL,
