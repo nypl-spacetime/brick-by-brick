@@ -1,6 +1,6 @@
 {
   "name": "brick-by-brick",
-  "version": "0.9.3",
+  "version": "0.10.0",
   "description": "NYC Space/Time Directory - brick-by-brick",
   "main": "index.js",
   "repository": {
@@ -10,7 +10,7 @@
   "scripts": {
     "test": "standard && cross-env NODE_ENV=test mocha test"
   },
-  "author": "NYPL Labs",
+  "author": "Bert Spaan",
   "license": "MIT",
   "dependencies": {
     "body-parser": "^1.15.2",

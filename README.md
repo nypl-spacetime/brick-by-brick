@@ -121,7 +121,7 @@ If returned items have submissions by the user associated with the current sessi
     "id": "organizationId"
   },
   "task": {
-    "id": "taskID"
+    "id": "taskId"
   },
   "data": {
     // JSON data
@@ -142,7 +142,7 @@ Or, when the user wants to skip a an item:
     "id": "organizationId"
   },
   "task": {
-    "id": "taskID"
+    "id": "taskId"
   },
   "skipped": true,
   "step": "name_of_step", // OPTIONAL
@@ -153,7 +153,7 @@ Or, when the user wants to skip a an item:
 - `GET /tasks/:taskId/submissions`: get *all* submissions for task `:taskId` for the user associated with the current session
 - `GET /tasks/:taskId/submissions/count`: get the amount of submissions for task `:taskId` for the user associated with the current session
 - `GET /tasks/:taskId/submissions/all`: get the first 1000 submissions for task `:taskId` (pagination will be added in a later version)
-- `GET /tasks/:taskId/submissions/all.ndjson`: get *all* submissions for task `:taskId`
+- `GET /tasks/:taskId/submissions/all.ndjson`: get *all* submissions for task `:taskId`, as [Newline delimited JSON](http://ndjson.org/)
 
 ### Organizations
 
