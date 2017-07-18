@@ -1,4 +1,5 @@
 {
+  "emitEvents": true,
   "server": {
     "host": null,
     "secret": null

@@ -9,7 +9,7 @@ const bodyParser = require('body-parser')
 const pkg = require('./package')
 const app = express()
 const server = require('http').createServer(app)
-// const io = require('socket.io')(server)
+const socketIo = require('socket.io')(server)
 
 const config = require('./base-config.json')
 var userConfig = Object.assign({}, config)
@@ -467,10 +467,26 @@ app.post('/submissions', userAuthorizedForOrganizationsOrCollections, itemExists
         message: err.message
       })
     } else {
-      // emitEvent(Object.assign(row, {
-      //   data: feature.properties.data,
-      //   geometry: feature.geometry
-      // }))
+      if (config.emitEvents) {
+        emitEvent({
+          submission: {
+            step: row.step,
+            stepIndex: row.step_index,
+            skipped: row.skipped,
+            data: row.data
+          },
+          item: {
+            id: row.item_id
+          },
+          organization: {
+            id: row.organization_id
+          },
+          task: {
+            id: row.task_id
+          }
+        })
+      }
+
       res.send({
         result: 'success'
       })
@@ -478,10 +494,9 @@ app.post('/submissions', userAuthorizedForOrganizationsOrCollections, itemExists
   })
 })
 
-// function emitEvent (row) {
-//   var feature = locationToFeature(row)
-//   io.emit('feature', feature)
-// }
+function emitEvent (data) {
+  socketIo.emit('submission', data)
+}
 
 app.get('/tasks/:taskId/submissions', (req, res) => {
   const taskId = req.params.taskId
