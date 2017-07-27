@@ -9,12 +9,16 @@ const bodyParser = require('body-parser')
 const pkg = require('./package')
 const app = express()
 const server = require('http').createServer(app)
-const socketIo = require('socket.io')(server)
 
 const config = require('./base-config.json')
-var userConfig = Object.assign({}, config)
+let userConfig = Object.assign({}, config)
 
-var configFound = false
+let socketIo
+if (config.emitEvents) {
+  socketIo = require('socket.io')(server)
+}
+
+let configFound = false
 if (process.env.BRICK_BY_BRICK_API_CONFIG || argv.config) {
   userConfig = require(process.env.BRICK_BY_BRICK_API_CONFIG || argv.config)
   configFound = true
@@ -47,7 +51,7 @@ const db = require('./lib/db')(config.database.url)
 const queries = require('./lib/queries')
 const serialize = require('./lib/serialize')
 
-var PORT = process.env.PORT || 3011
+const PORT = process.env.PORT || 3011
 
 app.use(cors({
   origin: true,
@@ -181,20 +185,22 @@ app.get('/tasks/:taskId/items', userAuthorizedForOrganizationsOrCollections, (re
   const taskId = req.params.taskId
   const userId = req.session.user.id
 
-  var params = {taskId, userId, limit: 50}
+  let params = {
+    taskId, userId, limit: 50
+  }
 
   const email = getUserEmail(req)
   if (email) {
     params = Object.assign(params, {email})
   }
 
-  var organizations
+  let organizations
   if (req.query && req.query.organization) {
     organizations = req.query.organization.split(',')
     params = Object.assign(params, {organizations})
   }
 
-  var collections
+  let collections
   if (req.query && req.query.collection) {
     collections = req.query.collection.split(',')
     params = Object.assign(params, {collections})
@@ -203,7 +209,7 @@ app.get('/tasks/:taskId/items', userAuthorizedForOrganizationsOrCollections, (re
   const paramValues = getParamValues(params)
   const paramIndexes = getParamIndexes(params)
 
-  var query = queries.makeAllItemsForTaskQuery(paramIndexes)
+  let query = queries.makeAllItemsForTaskQuery(paramIndexes)
   query = queries.addCollectionsTasksGroupBy(query, paramIndexes)
   query = queries.addSubmissionForUser(query, paramIndexes)
   query = queries.addLimitAndOffset(query, paramIndexes)
@@ -223,7 +229,7 @@ app.get('/tasks/:taskId/items/random', userAuthorizedForOrganizationsOrCollectio
   const userId = req.session.user.id
   const taskId = req.params.taskId
 
-  var params = {
+  let params = {
     userId,
     taskId
   }
@@ -233,13 +239,13 @@ app.get('/tasks/:taskId/items/random', userAuthorizedForOrganizationsOrCollectio
     params = Object.assign(params, {email})
   }
 
-  var organizations
+  let organizations
   if (req.query && req.query.organization) {
     organizations = req.query.organization.split(',')
     params = Object.assign(params, {organizations})
   }
 
-  var collections
+  let collections
   if (req.query && req.query.collection) {
     collections = req.query.collection.split(',')
     params = Object.assign(params, {collections})
@@ -248,7 +254,7 @@ app.get('/tasks/:taskId/items/random', userAuthorizedForOrganizationsOrCollectio
   const paramValues = getParamValues(params)
   const paramIndexes = getParamIndexes(params)
 
-  var query = queries.makeRandomItemQuery(paramIndexes)
+  let query = queries.makeRandomItemQuery(paramIndexes)
   query = queries.addCollectionsTasksGroupBy(query)
 
   db.executeQuery(query, paramValues, (err, rows) => {
@@ -262,7 +268,7 @@ app.get('/tasks/:taskId/items/random', userAuthorizedForOrganizationsOrCollectio
 
 app.get('/organizations/:organizationId/items/:itemId', userAuthorizedForOrganizationsOrCollections, (req, res) => {
   const userId = req.session.user.id
-  var params = {
+  const params = {
     organizationId: req.params.organizationId,
     itemId: req.params.itemId,
     userId
@@ -271,7 +277,7 @@ app.get('/organizations/:organizationId/items/:itemId', userAuthorizedForOrganiz
   const paramValues = getParamValues(params)
   const paramIndexes = getParamIndexes(params)
 
-  var query = queries.addCollectionsTasksGroupBy(queries.itemQuery)
+  let query = queries.addCollectionsTasksGroupBy(queries.itemQuery)
   query = queries.addSubmissionForUser(query, paramIndexes)
 
   db.executeQuery(query, paramValues, (err, rows) => {
@@ -284,7 +290,7 @@ app.get('/organizations/:organizationId/items/:itemId', userAuthorizedForOrganiz
 })
 
 function userAuthorizedForOrganizationsOrCollections (req, res, next) {
-  var organizationIds
+  let organizationIds
   const organizationId = req.params.organizationId ||
     (req.body && req.body.organization && req.body.organization.id)
   if (organizationId) {
@@ -293,7 +299,7 @@ function userAuthorizedForOrganizationsOrCollections (req, res, next) {
     organizationIds = req.query.organization.split(',')
   }
 
-  var collectionIds
+  let collectionIds
   const collectionId = req.params.collectionId ||
     (req.body && req.body.collection && req.body.collection.id)
   if (collectionId) {
@@ -355,7 +361,7 @@ function itemExists (req, res, next) {
 }
 
 app.post('/submissions', userAuthorizedForOrganizationsOrCollections, itemExists, (req, res) => {
-  var row = {
+  let row = {
     organization_id: null,
     item_id: null,
     task_id: null,
@@ -448,8 +454,8 @@ app.post('/submissions', userAuthorizedForOrganizationsOrCollections, itemExists
   row.user_id = req.session.user.id
 
   // Get information about client
-  var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-  var client = {
+  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+  const client = {
     ip: ip
   }
   row.client = JSON.stringify(client)
@@ -467,24 +473,14 @@ app.post('/submissions', userAuthorizedForOrganizationsOrCollections, itemExists
         message: err.message
       })
     } else {
-      if (config.emitEvents) {
-        emitEvent({
-          submission: {
-            step: row.step,
-            stepIndex: row.step_index,
-            skipped: row.skipped,
-            data: row.data
-          },
-          item: {
-            id: row.item_id
-          },
-          organization: {
-            id: row.organization_id
-          },
-          task: {
-            id: row.task_id
-          }
-        })
+      if (config.emitEvents && !row.skipped) {
+        emitSingleSubmission([
+          row.organization_id,
+          row.item_id,
+          row.user_id,
+          row.task_id,
+          row.step
+        ])
       }
 
       res.send({
@@ -494,14 +490,24 @@ app.post('/submissions', userAuthorizedForOrganizationsOrCollections, itemExists
   })
 })
 
-function emitEvent (data) {
-  socketIo.emit('submission', data)
+function emitSingleSubmission(values) {
+  db.executeQuery(queries.singleSubmissionQuery, values, (err, rows) => {
+    if (!err && rows.length === 1) {
+      emitEvent('submission', serialize.submission(rows[0]))
+    }
+  })
+}
+
+function emitEvent (type, data) {
+  if (socketIo) {
+    socketIo.emit(type, data)
+  }
 }
 
 app.get('/tasks/:taskId/submissions', (req, res) => {
   const taskId = req.params.taskId
   const userId = req.session.user.id
-  var query = queries.makeSubmissionsQuery(userId)
+  const query = queries.makeSubmissionsQuery(userId)
 
   db.executeQuery(query, [taskId, req.session.user.id], (err, rows) => {
     if (err) {
@@ -517,7 +523,7 @@ app.get('/tasks/:taskId/submissions', (req, res) => {
 
 app.get('/tasks/:taskId/submissions/all', (req, res) => {
   const taskId = req.params.taskId
-  var query = queries.makeSubmissionsQuery(null, 1000)
+  const query = queries.makeSubmissionsQuery(null, 1000)
   db.executeQuery(query, [taskId], (err, rows) => {
     if (err) {
       res.status(500).send({
@@ -532,7 +538,7 @@ app.get('/tasks/:taskId/submissions/all', (req, res) => {
 
 app.get('/tasks/:taskId/submissions/all.ndjson', (req, res) => {
   const taskId = req.params.taskId
-  var query = queries.makeSubmissionsQuery()
+  const query = queries.makeSubmissionsQuery()
 
   db.streamQuery(query, [taskId], (err, stream) => {
     if (err) {
@@ -560,7 +566,7 @@ app.get('/tasks/:taskId/submissions/count', (req, res) => {
       return
     }
 
-    var count = (rows[0] && rows[0].count) || 0
+    const count = (rows[0] && rows[0].count) || 0
     res.send({
       completed: count
     })
