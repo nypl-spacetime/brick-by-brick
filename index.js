@@ -254,7 +254,30 @@ app.get('/tasks/:taskId/items/random', userAuthorizedForOrganizationsOrCollectio
   const paramValues = getParamValues(params)
   const paramIndexes = getParamIndexes(params)
 
-  let query = queries.makeRandomItemQuery(paramIndexes)
+  // By default, a random item is returned for which submissions_needed is
+  // not reached and which the user has not done already.
+  // If anyRandomItem === true, a random item is returned, without these limitations.
+  let anyRandomItem = false
+
+  const anyRandomItemsources = [
+    'chrome-tab',
+    'digital-collections-tab',
+    'tab'
+  ]
+
+  if (req.query['include-completed'] === 'true') {
+    anyRandomItem = true
+  } else if (req.query.source && anyRandomItemsources.includes(req.query.source)) {
+    anyRandomItem = true
+  }
+
+  let query
+  if (anyRandomItem) {
+    query = queries.makeAnyRandomItemQuery(paramIndexes)
+  } else {
+    query = queries.makeRandomItemQuery(paramIndexes)
+  }
+
   query = queries.addCollectionsTasksGroupBy(query)
 
   db.executeQuery(query, paramValues, (err, rows) => {
@@ -490,7 +513,7 @@ app.post('/submissions', userAuthorizedForOrganizationsOrCollections, itemExists
   })
 })
 
-function emitSingleSubmission(values) {
+function emitSingleSubmission (values) {
   db.executeQuery(queries.singleSubmissionQuery, values, (err, rows) => {
     if (!err && rows.length === 1) {
       emitEvent('submission', serialize.submission(rows[0]))

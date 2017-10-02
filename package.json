@@ -1,6 +1,6 @@
 {
   "name": "brick-by-brick",
-  "version": "0.11.3",
+  "version": "0.12.0",
   "description": "NYC Space/Time Directory - brick-by-brick",
   "main": "index.js",
   "repository": {
